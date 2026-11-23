@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config.dart';
 import 'settings.dart';
 
 /// Native side: ios/Runner/BoothPrinter.swift (UIPrinterPickerController, UIPrintInteractionController).
@@ -101,6 +100,9 @@ class PrintQueue extends ChangeNotifier {
     _pump();
   }
 
+  /// Printing was switched on: send what is waiting.
+  void resume() => _pump();
+
   void retry(PrintJob job) {
     job
       ..status = JobStatus.waiting
@@ -111,7 +113,7 @@ class PrintQueue extends ChangeNotifier {
 
   /// Checks the printer is on the network (start screen badge).
   Future<void> check() async {
-    if (!PRINTING) return;
+    if (!_settings.printing) return;
     final url = _settings.printerUrl;
     if (url == null || _busy) return;
     final ok = await PrinterChannel.reachable(url);
@@ -130,7 +132,7 @@ class PrintQueue extends ChangeNotifier {
   }
 
   Future<void> _pump() async {
-    if (_busy || !PRINTING) return;
+    if (_busy || !_settings.printing) return;
     final job = _jobs.where((j) => j.status == JobStatus.waiting).firstOrNull;
     if (job == null) return;
     _busy = true;
@@ -144,7 +146,11 @@ class PrintQueue extends ChangeNotifier {
     } else if (!File(file).existsSync()) {
       error = 'Không tìm thấy file ảnh in';
     } else {
-      error = await PrinterChannel.printFile(url, file);
+      // A printer that never answers (out of paper, switched off mid-job) must not stop the queue.
+      error = await PrinterChannel.printFile(url, file).timeout(
+        const Duration(minutes: 3),
+        onTimeout: () => 'Máy in không phản hồi sau 3 phút',
+      );
     }
     job
       ..status = error == null ? JobStatus.done : JobStatus.failed

@@ -48,8 +48,11 @@ class GuestSession extends ChangeNotifier {
 
 /// What the thank-you screen shows.
 class Finished {
-  const Finished(this.url, this.printPath, this.aspect);
+  const Finished(this.url, this.printPath, this.aspect, {this.printed = false});
   final String url;
+
+  /// Sent to the printer (printing switched on in admin).
+  final bool printed;
 
   /// The card as designed (landscape for 4 Cut).
   final String printPath;
@@ -137,7 +140,7 @@ class Booth {
       ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);
-    if (!PRINTING) {
+    if (!settings.printing) {
       // Printing is off for now: saved and uploaded only.
     } else if (guest.layout.landscape) {
       // The SELPHY takes portrait postcards: a turned copy goes to the printer.
@@ -162,7 +165,7 @@ class Booth {
       uploads.add(id, '${k + 1}.jpg', path, title);
     }
     unawaited(_clips(guest, filter, id, dir, title));
-    return Finished(url, printPath, guest.layout.size.aspectRatio);
+    return Finished(url, printPath, guest.layout.size.aspectRatio, printed: settings.printing);
   }
 
   Future<void> _clips(GuestSession guest, BoothFilter filter, String id, Directory dir, String title) async {

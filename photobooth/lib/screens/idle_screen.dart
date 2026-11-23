@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../booth/booth.dart';
-import '../config.dart';
 import '../ui/lux.dart';
 import '../ui/strings.dart';
 import '../ui/sparkle.dart';
@@ -434,7 +433,7 @@ class _StaffChip extends StatelessWidget {
                 pending == 0 ? 'đã lên hết' : '$pending chờ${failing > 0 ? ' · $failing thử lại' : ''}',
                 style: LuxFonts.sans(size: 15, weight: FontWeight.w500),
               ),
-              if (PRINTING) ...[
+              if (booth.settings.printing) ...[
                 const SizedBox(width: 14),
                 dot(printerOk == true ? const Color(0xFF7BD389) : Lux.urgent, Icons.print),
                 const SizedBox(width: 8),

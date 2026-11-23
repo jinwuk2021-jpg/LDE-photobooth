@@ -35,6 +35,13 @@ class BoothSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Print each card on the SELPHY. Off: the last button only saves, uploads and shows the QR.
+  bool get printing => _prefs.getBool('printing') ?? false;
+  set printing(bool v) {
+    _prefs.setBool('printing', v);
+    notifyListeners();
+  }
+
   SkinSmooth get skin => SkinSmooth.byName(_prefs.getString('skin'));
   set skin(SkinSmooth v) => _set('skin', v.name);
 

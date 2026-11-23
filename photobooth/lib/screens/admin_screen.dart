@@ -72,21 +72,37 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   /// A print with numbered windows and a QR, to check size and borders.
-  Future<void> _testPrint() async {
+  /// A [layout] card with numbered windows and a QR, sent exactly like a guest's (4 Cut turned).
+  Future<void> _testPrint(BoothLayout layout) async {
     final b = widget.booth;
-    final img = await renderPrint(
+    final card = await renderPrint(
       PrintSpec(
-        layout: BoothLayout.cut2,
-        photos: const [null, null, null, null],
+        layout: layout,
+        photos: const [],
         title: _title.text.isEmpty ? 'In thử' : _title.text,
         dateLine: _date.text,
+        subtitle: _subtitle.text,
         qrUrl: b.linkFor('testtesttest'),
       ),
     );
+    final img = layout.landscape ? await forPrinter(card) : card;
     final dir = Directory(p.join(b.docs.path, 'Booth', 'in-thu'))..createSync(recursive: true);
-    final path = await b.camera.saveJpeg(img, p.join(dir.path, 'in-thu-${DateTime.now().millisecondsSinceEpoch}.jpg'));
-    img.dispose();
+    final path = await b.camera.saveJpeg(
+      img,
+      p.join(dir.path, 'in-thu-${layout.name}-${DateTime.now().millisecondsSinceEpoch}.jpg'),
+      quality: 95,
+    );
+    if (!identical(img, card)) img.dispose();
+    card.dispose();
     b.prints.add(path);
+  }
+
+  Future<void> _checkPrinter() async {
+    await widget.booth.prints.check();
+    if (!mounted) return;
+    final ok = widget.booth.prints.printerOk == true;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(ok ? 'Máy in trả lời: OK' : 'Không liên lạc được máy in')));
   }
 
   @override
@@ -104,10 +120,23 @@ class _AdminScreenState extends State<AdminScreen> {
           padding: const EdgeInsets.all(28),
           children: [
             _section('Máy in'),
-            if (!PRINTING)
-              Text('Đang tắt in (PRINTING = false trong lib/config.dart).', style: LuxFonts.sans(size: 18))
-            else ...[
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('In ảnh cho khách', style: LuxFonts.sans(size: 18)),
+              subtitle: Text(
+                b.settings.printing ? 'Bật: mỗi lượt gửi 1 tấm sang máy in' : 'Tắt: chỉ lưu, upload và hiện QR',
+                style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
+              ),
+              value: b.settings.printing,
+              onChanged: (v) {
+                b.settings.printing = v;
+                if (v) b.prints.resume();
+              },
+            ),
+            if (b.settings.printing) ...[
               Text(b.settings.printerName ?? 'Chưa chọn máy in', style: LuxFonts.sans(size: 18)),
+              if (b.settings.printerUrl != null)
+                Text(b.settings.printerUrl!, style: LuxFonts.sans(size: 13, color: Lux.ivoryA(0.5))),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 12,
@@ -119,10 +148,23 @@ class _AdminScreenState extends State<AdminScreen> {
                     label: const Text('Chọn máy in'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: b.settings.printerUrl == null ? null : _testPrint,
-                    icon: const Icon(Icons.description_outlined),
-                    label: const Text('In thử'),
+                    onPressed: b.settings.printerUrl == null ? null : _checkPrinter,
+                    icon: const Icon(Icons.wifi_tethering),
+                    label: const Text('Kiểm tra kết nối'),
                   ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final l in BoothLayout.values)
+                    OutlinedButton.icon(
+                      onPressed: b.settings.printerUrl == null ? null : () => _testPrint(l),
+                      icon: const Icon(Icons.description_outlined),
+                      label: Text('In thử ${l.label}'),
+                    ),
                 ],
               ),
               const SizedBox(height: 14),

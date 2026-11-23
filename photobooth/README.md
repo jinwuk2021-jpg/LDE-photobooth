@@ -37,7 +37,7 @@ Màn admin: chạm 5 lần vào góc trên bên phải màn chờ, nhập PIN `1
 ## Checklist trước sự kiện
 
 1. Bật điểm phát cá nhân trên iPhone, bật **Tối đa hoá tương thích** (2.4GHz). SELPHY và iPad cùng vào mạng đó.
-2. Mở admin → **Chọn máy in** → **In thử**. Kiểm tra khổ ảnh, viền, đường cắt ở giữa; QR quét được.
+2. Mở admin → bật **In ảnh cho khách** → **Chọn máy in** → **In thử** từng khung. Làm theo [docs/SELPHY_TODO.md](docs/SELPHY_TODO.md).
 3. Chụp thử một lượt. Quét QR bằng điện thoại có cài Lensly và một điện thoại không cài: phải xem được ảnh in, 4 ảnh,
    4 clip, và tải về được. Ở góc màn chờ phải hiện "đã lên hết".
 4. Vào admin sửa **tiêu đề** và **dòng ngày**. Chọn mức **làm mịn da**.

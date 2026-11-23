@@ -71,7 +71,7 @@ class _ThanksScreenState extends State<ThanksScreen> with TickerProviderStateMix
               child: Column(
                 children: [
                   GoldText(
-                    PRINTING ? T.now.printing : T.now.allDone,
+                    widget.finished.printed ? T.now.printing : T.now.allDone,
                     style: LuxFonts.serif(size: 92, weight: FontWeight.w700, height: 1.08),
                   ),
                   const SizedBox(height: 6),

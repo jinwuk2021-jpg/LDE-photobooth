@@ -31,9 +31,7 @@ const String ADMIN_PIN = '1234';
 /// Album in the iPad's Photos app that every print (with its QR) is copied into.
 const String PHOTOS_ALBUM = 'Photobooth';
 
-/// Printing on the SELPHY. Off for now (owner 2026-11-23: get the guest flow working first):
-/// the last button saves, uploads and shows the QR; no print job, no printer lookup.
-const bool PRINTING = false;
+// Printing on the SELPHY is switched on in admin (BoothSettings.printing), off by default.
 
 /// Live: length of the clip kept before the shutter, and file segment length (as in Lensly).
 const Duration LIVE_WINDOW = Duration(seconds: 5);

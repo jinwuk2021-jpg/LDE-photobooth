@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../booth/booth.dart';
-import '../config.dart';
 import '../booth/print_layout.dart';
 import '../camera/filters.dart';
 import '../ui/lux.dart';
@@ -367,7 +366,7 @@ class _PickScreenState extends State<PickScreen> {
                   label: _printing
                       ? T.now.processing
                       : (guest.complete
-                            ? (PRINTING ? T.now.print : T.now.done)
+                            ? (widget.booth.settings.printing ? T.now.print : T.now.done)
                             : T.now.doneMore(need - guest.picks.length)),
                   icon: guest.complete && !_printing ? Icons.arrow_forward : null,
                   iconAfter: true,
