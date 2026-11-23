@@ -36,9 +36,30 @@ class BoothSettings extends ChangeNotifier {
   }
 
   /// Print each card on the SELPHY. Off: the last button only saves, uploads and shows the QR.
-  bool get printing => _prefs.getBool('printing') ?? false;
+  bool get printing => _prefs.getBool('printing') ?? true;
   set printing(bool v) {
     _prefs.setBool('printing', v);
+    notifyListeners();
+  }
+
+  /// Picture covers the whole sheet (borderless) instead of fitting the printable area.
+  bool get printFill => _prefs.getBool('printFill') ?? true;
+  set printFill(bool v) {
+    _prefs.setBool('printFill', v);
+    notifyListeners();
+  }
+
+  /// Lift for the printer copy, in percent (0, 5, 10, 15).
+  int get printBrighten => _prefs.getInt('printBrighten') ?? 0;
+  set printBrighten(int v) {
+    _prefs.setInt('printBrighten', v);
+    notifyListeners();
+  }
+
+  /// Turn 4 Cut the other way for the printer.
+  bool get turnCounterClockwise => _prefs.getBool('turnCcw') ?? false;
+  set turnCounterClockwise(bool v) {
+    _prefs.setBool('turnCcw', v);
     notifyListeners();
   }
 

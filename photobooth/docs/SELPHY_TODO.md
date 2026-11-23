@@ -1,7 +1,8 @@
 # Kết nối Canon SELPHY CP1500: việc cần làm
 
 Mục tiêu: iPad in thẳng sang SELPHY qua AirPrint, không hiện hộp thoại, đúng khổ postcard 100×148 mm.
-Trong app, phần in đang **tắt** sẵn. Bật bằng công tắc trong admin, không cần build lại app.
+Trong app, phần in đã **bật sẵn**: chỉ cần chọn máy in là in được. Mọi tuỳ chọn in đều chỉnh trong admin,
+không cần build lại app.
 
 ## 0. Mang theo
 
@@ -24,7 +25,7 @@ Trong app, phần in đang **tắt** sẵn. Bật bằng công tắc trong admin
 
 Mở admin: chạm 5 lần vào góc trên bên phải màn chờ, nhập PIN `1234`.
 
-- [ ] Bật **In ảnh cho khách**
+- [ ] Kiểm tra **In ảnh cho khách** đang bật (bật sẵn)
 - [ ] **Chọn máy in** → chọn SELPHY
   (nếu iPad hỏi quyền "Mạng cục bộ" thì bấm **Cho phép**)
 - [ ] **Kiểm tra kết nối** → phải báo "Máy in trả lời: OK"
@@ -45,6 +46,18 @@ Bấm lần lượt **In thử 2 Cut**, **3 Cut**, **4 Cut**, **6 Cut** trong ad
 | Dùng điện thoại quét QR trên tấm in → mở được trang | | | | |
 
 Tấm in thử có QR trỏ tới một link giả (`.../b/testtesttest`): trang sẽ báo "đang tải lên", như vậy là bình thường.
+
+## 3b. Tự chỉnh nếu bản in chưa đẹp (ngay trong admin, rồi In thử lại)
+
+| Thấy gì | Chỉnh |
+|---|---|
+| Có viền trắng quanh ảnh | **Kiểu in: Tràn lề** (mặc định) |
+| Bị cắt mất chữ hoặc QR ở mép | **Kiểu in: Vừa khổ (có viền)** |
+| Ảnh in ra tối, màu vàng bị xỉn | **Làm sáng bản in: +5%**, chưa đủ thì **+10%** |
+| Ảnh bị cháy, mất chi tiết vùng sáng | giảm **Làm sáng** về Không |
+| Tấm 4 Cut lộn đầu | bật **Xoay 4 Cut theo chiều ngược lại** |
+
+Các tuỳ chọn này áp dụng cho mọi lần in sau, kể cả In lại. Ảnh gửi lên web không bị ảnh hưởng.
 
 ## 4. Thử hàng đợi và lỗi
 
@@ -69,7 +82,7 @@ Tấm in thử có QR trỏ tới một link giả (`.../b/testtesttest`): trang
 - Ảnh chụp màn hình "Hàng đợi in" nếu có lỗi (kèm dòng lỗi)
 - Thời gian in một tấm, và kết quả thử rút khay giấy
 
-Dựa vào đó Claude có thể chỉnh:
+Nếu chỉnh ở mục 3b vẫn chưa ổn, Claude có thể chỉnh thêm:
 - lề an toàn hoặc tỉ lệ tấm in nếu bị cắt mép hay có viền trắng
 - chiều xoay của 4 Cut
 - độ sáng và màu vàng nếu in ra tối
@@ -78,7 +91,8 @@ Dựa vào đó Claude có thể chỉnh:
 ## Ghi chú kỹ thuật
 
 - App gửi lệnh in qua `UIPrintInteractionController` tới máy in đã chọn (`UIPrinter(url:)`), loại ảnh `.photo`, khổ dọc,
-  khổ giấy 283.5 × 419.5 pt (100×148 mm). Lệnh in đi lần lượt từng cái: lệnh sau chỉ gửi khi lệnh trước đã báo xong
+  khổ giấy 283.5 × 419.5 pt (100×148 mm). App tự vẽ trang in (`PhotoPageRenderer`): "Tràn lề" phủ kín cả tờ giấy,
+  "Vừa khổ" nằm trọn trong vùng máy in in được. Lệnh in đi lần lượt từng cái: lệnh sau chỉ gửi khi lệnh trước đã báo xong
   hoặc đã quá 3 phút.
 - File gửi máy in: `Booth/<ngày>/<giờ>/print.jpg` (4 Cut dùng `print_may_in.jpg`, đã xoay dọc). In thử nằm trong `Booth/in-thu/`.
 - Code: `ios/Runner/AppDelegate.swift` (phần native), `lib/services/printer.dart` (hàng đợi in).

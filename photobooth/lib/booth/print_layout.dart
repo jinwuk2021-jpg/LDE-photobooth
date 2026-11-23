@@ -174,14 +174,35 @@ Future<ui.Image> renderPrint(PrintSpec spec) {
   return rec.endRecording().toImage(s.width.round(), s.height.round());
 }
 
-/// [card] as the printer takes it: portrait, a landscape card turned a quarter clockwise.
-Future<ui.Image> forPrinter(ui.Image card) {
+/// [card] as the printer takes it: always portrait (a landscape card turned a quarter,
+/// clockwise unless [counterClockwise]), [brighten] lifted (0.1 = +10 %: dye-sub prints run dark).
+Future<ui.Image> forPrinter(ui.Image card, {bool counterClockwise = false, double brighten = 0}) {
+  final landscape = card.width > card.height;
+  final w = landscape ? card.height : card.width, h = landscape ? card.width : card.height;
   final rec = ui.PictureRecorder();
-  Canvas(rec)
-    ..translate(card.height.toDouble(), 0)
-    ..rotate(math.pi / 2)
-    ..drawImage(card, Offset.zero, Paint()..filterQuality = FilterQuality.high);
-  return rec.endRecording().toImage(card.height, card.width);
+  final canvas = Canvas(rec);
+  if (landscape) {
+    if (counterClockwise) {
+      canvas
+        ..translate(0, h.toDouble())
+        ..rotate(-math.pi / 2);
+    } else {
+      canvas
+        ..translate(w.toDouble(), 0)
+        ..rotate(math.pi / 2);
+    }
+  }
+  final k = 1 + brighten, add = 255 * brighten * 0.5;
+  canvas.drawImage(
+    card,
+    Offset.zero,
+    Paint()
+      ..filterQuality = FilterQuality.high
+      ..colorFilter = brighten == 0
+          ? null
+          : ColorFilter.matrix([k, 0, 0, 0, add, 0, k, 0, 0, add, 0, 0, k, 0, add, 0, 0, 0, 1, 0]),
+  );
+  return rec.endRecording().toImage(w, h);
 }
 
 const _ivoryFrame = Color(0xFFC9A35C);

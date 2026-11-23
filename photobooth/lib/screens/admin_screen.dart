@@ -85,14 +85,11 @@ class _AdminScreenState extends State<AdminScreen> {
         qrUrl: b.linkFor('testtesttest'),
       ),
     );
-    final img = layout.landscape ? await forPrinter(card) : card;
     final dir = Directory(p.join(b.docs.path, 'Booth', 'in-thu'))..createSync(recursive: true);
-    final path = await b.camera.saveJpeg(
-      img,
+    final path = await b.printerCopy(
+      card,
       p.join(dir.path, 'in-thu-${layout.name}-${DateTime.now().millisecondsSinceEpoch}.jpg'),
-      quality: 95,
     );
-    if (!identical(img, card)) img.dispose();
     card.dispose();
     b.prints.add(path);
   }
@@ -166,6 +163,49 @@ class _AdminScreenState extends State<AdminScreen> {
                       label: Text('In thử ${l.label}'),
                     ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Nếu bản in chưa đẹp, chỉnh ở đây rồi In thử lại:',
+                style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text('Kiểu in: ', style: LuxFonts.sans(size: 18)),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: true, label: Text('Tràn lề')),
+                      ButtonSegment(value: false, label: Text('Vừa khổ (có viền)')),
+                    ],
+                    selected: {b.settings.printFill},
+                    onSelectionChanged: (v) => b.settings.printFill = v.first,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text('Làm sáng bản in: ', style: LuxFonts.sans(size: 18)),
+                  SegmentedButton<int>(
+                    segments: [
+                      for (final v in const [0, 5, 10, 15])
+                        ButtonSegment(value: v, label: Text(v == 0 ? 'Không' : '+$v%')),
+                    ],
+                    selected: {b.settings.printBrighten},
+                    onSelectionChanged: (v) => b.settings.printBrighten = v.first,
+                  ),
+                ],
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Xoay 4 Cut theo chiều ngược lại', style: LuxFonts.sans(size: 18)),
+                subtitle: Text(
+                  'Bật nếu tấm 4 Cut in ra bị lộn đầu so với ý muốn',
+                  style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
+                ),
+                value: b.settings.turnCounterClockwise,
+                onChanged: (v) => b.settings.turnCounterClockwise = v,
               ),
               const SizedBox(height: 14),
               Text(

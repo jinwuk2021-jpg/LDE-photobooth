@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -98,6 +99,26 @@ void main() {
         expect({layout.size.width, layout.size.height}, {1200.0, 1776.0});
       });
     }
+
+    test('printer copy: always portrait (either turn), brightened when asked', () async {
+      Future<ui.Image> solid(int w, int h, Color c) {
+        final rec = ui.PictureRecorder();
+        Canvas(rec).drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = c);
+        return rec.endRecording().toImage(w, h);
+      }
+
+      final landscape = await solid(40, 20, const Color(0xFF808080));
+      for (final ccw in [false, true]) {
+        final out = await forPrinter(landscape, counterClockwise: ccw);
+        expect((out.width, out.height), (20, 40));
+      }
+      final portrait = await solid(20, 40, const Color(0xFF808080));
+      final same = await forPrinter(portrait);
+      expect((same.width, same.height), (20, 40));
+      Future<int> red(ui.Image img) async => (await img.toByteData())!.getUint8(0);
+      final lifted = await forPrinter(portrait, brighten: 0.1);
+      expect(await red(lifted), greaterThan(await red(same)));
+    });
 
     test('renders every frame; 4 Cut is turned portrait for the printer', () async {
       final out = Platform.environment['PRINT_OUT'];

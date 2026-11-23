@@ -140,16 +140,7 @@ class Booth {
       ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);
-    if (!settings.printing) {
-      // Printing is off for now: saved and uploaded only.
-    } else if (guest.layout.landscape) {
-      // The SELPHY takes portrait postcards: a turned copy goes to the printer.
-      final turned = await forPrinter(printImage);
-      prints.add(await camera.saveJpeg(turned, p.join(dir.path, 'print_may_in.jpg'), quality: 95));
-      turned.dispose();
-    } else {
-      prints.add(printPath);
-    }
+    if (settings.printing) prints.add(await printerCopy(printImage, p.join(dir.path, 'print_may_in.jpg')));
     printImage.dispose();
     uploads.add(id, 'print.jpg', printPath, title);
     // Where each photo sits on the print, so the page plays the clips in their windows.
@@ -176,6 +167,20 @@ class Booth {
       }
     } finally {
       discard(guest);
+    }
+  }
+
+  /// The file the printer gets: portrait (4 Cut turned) and brightened as set in admin.
+  Future<String> printerCopy(ui.Image card, String path) async {
+    final copy = await forPrinter(
+      card,
+      counterClockwise: settings.turnCounterClockwise,
+      brighten: settings.printBrighten / 100,
+    );
+    try {
+      return await camera.saveJpeg(copy, path, quality: 95);
+    } finally {
+      copy.dispose();
     }
   }
 

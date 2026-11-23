@@ -20,9 +20,10 @@ abstract final class PrinterChannel {
   }
 
   /// Prints the image at [path] on [url] without any dialog. Null when done, else the error.
-  static Future<String?> printFile(String url, String path) async {
+  /// [fill]: cover the whole sheet (borderless) instead of fitting the printable area.
+  static Future<String?> printFile(String url, String path, {bool fill = true}) async {
     try {
-      return await _ch.invokeMethod<String>('print', {'url': url, 'path': path});
+      return await _ch.invokeMethod<String>('print', {'url': url, 'path': path, 'fill': fill});
     } on PlatformException catch (e) {
       return e.message ?? e.code;
     }
@@ -147,10 +148,11 @@ class PrintQueue extends ChangeNotifier {
       error = 'Không tìm thấy file ảnh in';
     } else {
       // A printer that never answers (out of paper, switched off mid-job) must not stop the queue.
-      error = await PrinterChannel.printFile(url, file).timeout(
-        const Duration(minutes: 3),
-        onTimeout: () => 'Máy in không phản hồi sau 3 phút',
-      );
+      error = await PrinterChannel.printFile(
+        url,
+        file,
+        fill: _settings.printFill,
+      ).timeout(const Duration(minutes: 3), onTimeout: () => 'Máy in không phản hồi sau 3 phút');
     }
     job
       ..status = error == null ? JobStatus.done : JobStatus.failed
