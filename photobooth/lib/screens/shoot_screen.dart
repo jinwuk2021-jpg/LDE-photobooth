@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../booth/booth.dart';
 import '../camera/photobooth_sequence.dart';
+import '../config.dart';
 import '../ui/flip_countdown.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -43,9 +44,11 @@ class _ShootScreenState extends State<ShootScreen> {
       },
       onError: (_) => _finish(ok: false),
     );
-    widget.booth.camera.live.start().whenComplete(() {
-      if (mounted) _sequence.start();
-    });
+    // Live starts now (the encoder warms up), the countdown after READY_DELAY.
+    Future.wait([widget.booth.camera.live.start().catchError((_) {}), Future<void>.delayed(READY_DELAY)])
+        .whenComplete(() {
+          if (mounted) _sequence.start();
+        });
   }
 
   @override
@@ -78,6 +81,7 @@ class _ShootScreenState extends State<ShootScreen> {
   @override
   Widget build(BuildContext context) {
     final counting = _state.phase == BoothPhase.countdown;
+    final getReady = _state.phase == BoothPhase.idle;
     return Stack(
       children: [
         CameraView(widget.booth.camera.preview),
@@ -96,6 +100,17 @@ class _ShootScreenState extends State<ShootScreen> {
             ],
           ),
         ),
+        if (getReady)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 150,
+            child: Text(
+              'Chuẩn bị nhé!\nNhìn vào camera',
+              textAlign: TextAlign.center,
+              style: TextStyles.hero.copyWith(color: Palette.paper, shadows: const [Shadow(blurRadius: 12)]),
+            ),
+          ),
         // Top-left corner, out of the faces.
         if (counting) Positioned(left: 28, top: 28, child: FlipCountdown(value: _state.remaining, size: 150)),
         IgnorePointer(

@@ -15,6 +15,10 @@ const int SHOTS = 6;
 const int FIRST_COUNTDOWN = 5;
 const int NEXT_COUNTDOWN = 3;
 
+/// "Chuẩn bị nhé!" before the first countdown: the guest has just tapped the screen and is
+/// stepping back, which must not end up in the first shot's Live clip.
+const Duration READY_DELAY = Duration(seconds: 3);
+
 /// No touch for this long on the frame picker → back to the start screen.
 /// (The photo picker has its own visible limit: BoothSettings.pickSeconds.)
 const Duration IDLE_TIMEOUT = Duration(seconds: 60);
