@@ -168,7 +168,7 @@ test('booth: layout.json puts each clip in its window of the print, with "Tải 
   assert.match(done, /id="compose"/);
   assert.match(done, /const R=\[\[0\.05,0\.03,0\.9,0\.4\],\[0\.05,0\.5,0\.9,0\.4\]\]/);
   assert.doesNotMatch(done, /class="vwait"|đang được tải lên|status\.json/);
-  assert.equal((html.match(/<figure>/g) || []).length, 2);
+  assert.equal((html.match(/class="tile"/g) || []).length, 2);
 });
 
 test('only /lde/ is answered here (the rest of lenslycam.com stays with Lensly)', async () => {
@@ -182,7 +182,8 @@ test('the page loads fonts and files from /lde/', async () => {
   const e = boothEnv();
   await boothPut(e, 'print.jpg', jpgBody(1));
   const html = await (await boothGet(e, '')).text();
-  assert.match(html, /url\(\/lde\/fonts\/PatrickHand-Regular\.ttf\)/);
+  assert.match(html, /url\(\/lde\/fonts\/PlayfairDisplay-Bold\.ttf\)/);
+  assert.match(html, /url\(\/lde\/fonts\/BeVietnamPro-Regular\.ttf\)/);
   assert.doesNotMatch(html, /url\(\/fonts\//);
   assert.match(html, /src="\/lde\/b\/abcdefghjkmn\/print\.jpg"/);
 });
@@ -204,4 +205,17 @@ test('the page speaks the phone language: ja, en, unknown → en, ?lang= wins', 
   // Expired page too.
   const gone = await (await worker.fetch(new Request(`https://lenslycam.com/lde/b/${BID}`, { headers: { 'accept-language': 'ja' } }), e, {}, () => 1_000 + 31 * DAY)).text();
   assert.match(gone, /写真の公開期間が終了しました/);
+});
+
+test('the header shows the event text from layout.json; the title is gold with an italic tail', async () => {
+  const e = boothEnv();
+  const enc = (o) => new TextEncoder().encode(JSON.stringify(o));
+  await boothPut(e, 'layout.json', enc({ aspect: 0.6757, rects: [[0.05, 0.03, 0.9, 0.4]], title: 'LPE Sum Up', subtitle: 'Tiệc tổng kết <cuối năm>', date: '23.12.2026' }));
+  await boothPut(e, 'print.jpg', jpgBody(9));
+  const html = await (await boothGet(e, '')).text();
+  assert.match(html, /<div class="serif gold brandTitle">LPE <i>Sum Up<\/i><\/div>/);
+  assert.match(html, /Tiệc tổng kết &lt;cuối năm&gt; 1970/);
+  assert.match(html, /<div class="sub">23\.12\.2026<\/div>/);
+  assert.match(html, /Ảnh của bạn/);
+  assert.match(html, /LPE SUM UP · PHOTOBOOTH/);
 });

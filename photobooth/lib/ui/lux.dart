@@ -52,7 +52,7 @@ abstract final class Lux {
   );
 }
 
-/// Fonts: Playfair Display (titles) and Be Vietnam Pro (everything else), from Google Fonts.
+/// Fonts: Playfair Display (titles) and Be Vietnam Pro (everything else), bundled in google_fonts/.
 /// Off in tests (no network): plain styles then.
 abstract final class LuxFonts {
   static bool enabled = false;
@@ -102,17 +102,20 @@ abstract final class LuxFonts {
   /// Starts loading every weight the app uses; waits a little so the first screen has them.
   static Future<void> warmUp() async {
     enabled = true;
+    // The fonts ship in google_fonts/ (assets): never fetch at the event.
+    GoogleFonts.config.allowRuntimeFetching = false;
+    // Exactly the bundled variants: Playfair 400 / 600 / 700 + italic 400, Be Vietnam Pro 300–700.
     for (final w in [FontWeight.w400, FontWeight.w600, FontWeight.w700]) {
       serif(weight: w);
-      serif(weight: w, italic: true);
     }
-    for (final w in [FontWeight.w300, FontWeight.w400, FontWeight.w500, FontWeight.w600]) {
+    serif(weight: FontWeight.w400, italic: true);
+    for (final w in [FontWeight.w300, FontWeight.w400, FontWeight.w500, FontWeight.w600, FontWeight.w700]) {
       sans(weight: w);
     }
     try {
       await GoogleFonts.pendingFonts().timeout(const Duration(seconds: 6));
     } catch (_) {
-      // Offline on the first launch: system fonts until the next start.
+      // A weight missing from google_fonts/: that text falls back to the system font.
     }
   }
 }

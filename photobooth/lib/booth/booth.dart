@@ -151,7 +151,9 @@ class Booth {
     uploads.add(id, 'print.jpg', printPath, title);
     // Where each photo sits on the print, so the page plays the clips in their windows.
     final layoutPath = p.join(dir.path, 'layout.json');
-    File(layoutPath).writeAsStringSync(jsonEncode(layoutJson(guest.layout)));
+    File(layoutPath).writeAsStringSync(
+      jsonEncode(layoutJson(guest.layout, title: title, subtitle: settings.subtitle, date: settings.dateLine)),
+    );
     uploads.add(id, 'layout.json', layoutPath, title);
     _toPhotos(printPath);
 
@@ -191,12 +193,15 @@ class Booth {
   }
 }
 
-/// layout.json for the Worker: the card's width / height and each photo window as
-/// [x, y, w, h] fractions of the card.
-Map<String, Object> layoutJson(BoothLayout layout) {
+/// layout.json for the Worker: the card's width / height, each photo window as
+/// [x, y, w, h] fractions of the card, and the event text for the guest page's header.
+Map<String, Object> layoutJson(BoothLayout layout, {String title = '', String subtitle = '', String date = ''}) {
   final size = layout.size;
   double f(double v) => double.parse(v.toStringAsFixed(4));
   return {
+    'title': title,
+    'subtitle': subtitle,
+    'date': date,
     'aspect': f(size.aspectRatio),
     'rects': [
       for (final r in PrintGeometry.of(layout).cells)

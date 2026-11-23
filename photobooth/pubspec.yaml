@@ -31,3 +31,6 @@ flutter:
   shaders:
     - shaders/film.frag
     - shaders/skin.frag
+  # Playfair Display + Be Vietnam Pro (OFL), bundled so google_fonts never needs the network.
+  assets:
+    - google_fonts/

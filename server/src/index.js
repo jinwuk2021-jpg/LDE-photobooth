@@ -91,69 +91,112 @@ const SCRIPT_FILL = `const F=(s,o)=>Object.keys(o).reduce((a,k)=>a.split('{'+k+'
 
 // Same flea-market palette as the app (lib/core/tokens.dart): a gingham
 // cloth like the gallery, the print taped onto it, handwritten title.
+// LPE Sum Up design ("Web khách"): night background with a navy glow, champagne gold, glass,
+// Playfair Display + Be Vietnam Pro served from /lde/fonts (no third party sees the guests).
 const STYLE = `
-:root{--cloth:#E7DCC0;--check:rgba(94,107,78,.30);--paper:#F6F0E2;--ink:#4A3426;--brick:#A8543E;--brick-dark:#86402E;
---kraft:#C49A6C;--kraft-dark:#9C7449;--mustard:#C99A3B;--moss:#5E6B4E;--muted:#6E5A49;--shadow:rgba(30,26,22,.38)}
-@media (prefers-color-scheme:dark){:root{--cloth:#2A2420;--check:rgba(94,107,78,.42);--paper:#EFE6D0;--ink:#EFE6D0;--brick:#C46A50;
---brick-dark:#8E4632;--muted:#CDBB9F;--shadow:rgba(0,0,0,.55)}}
+:root{--night:#0B0B12;--gold:#D4AF6A;--gold-l:#F5E1A4;--ivory:#F8F3E8;--rose:#E9C7C0;--muted:rgba(248,243,232,.6)}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
-body{background-color:var(--cloth);color:var(--ink);font:16px/1.5 "Space Mono",ui-monospace,Menlo,monospace;
-background-image:linear-gradient(90deg,var(--check) 50%,transparent 50%),linear-gradient(var(--check) 50%,transparent 50%);
-background-size:44px 44px}
-main{max-width:520px;margin:0 auto;padding:18px 16px 36px;text-align:center}
-.brand{display:inline-block;margin:4px 0 0;padding:4px 14px 4px 22px;background:var(--kraft);color:#3A2A1E;font-size:12px;
-letter-spacing:.18em;text-transform:uppercase;clip-path:polygon(12px 0,100% 0,100% 100%,12px 100%,0 50%);box-shadow:0 2px 0 var(--kraft-dark)}
-h1{font-family:"Patrick Hand","Comic Sans MS",cursive;font-weight:400;font-size:34px;line-height:1.15;margin:10px 0 18px;color:var(--ink);
-text-shadow:0 1px 0 rgba(246,240,226,.6)}
-@media (prefers-color-scheme:dark){h1{text-shadow:none}}
-.stage{position:relative;margin:0 auto 6px;transform:rotate(-1.6deg)}
-.stage::before{content:"";position:absolute;z-index:2;top:-12px;left:50%;width:96px;height:26px;margin-left:-48px;
-background:rgba(201,154,59,.78);transform:rotate(3deg);box-shadow:0 1px 2px rgba(30,26,22,.25)}
-.print{position:relative;width:100%;filter:drop-shadow(0 14px 22px var(--shadow))}
+body{position:relative;background:radial-gradient(140% 40% at 50% 0%,#1d2448 0%,#0B0B12 62%) #0B0B12;color:var(--ivory);
+font:15px/1.5 "Be Vietnam Pro","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;overflow-x:hidden}
+main{position:relative;max-width:460px;margin:0 auto;padding:40px 20px 120px}
+.serif{font-family:"Playfair Display","Hiragino Mincho ProN","Noto Serif JP",Georgia,serif}
+.eyebrow{font-weight:600;text-transform:uppercase;letter-spacing:.3em;font-size:11px;color:rgba(248,243,232,.75)}
+.gold{background:linear-gradient(100deg,#9C7A3F 0%,#D4AF6A 22%,#F5E1A4 45%,#FFF6DA 50%,#F5E1A4 55%,#D4AF6A 78%,#9C7A3F 100%);background-size:220% 100%;
+background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:sweep 6s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes sweep{0%,100%{background-position:100% 0}50%{background-position:0% 0}}
+header{text-align:center}
+.brandTitle{margin-top:8px;font-size:40px;font-weight:700;line-height:1.1}
+.brandTitle i{font-weight:400}
+.deco{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px}
+.deco span{display:block}.deco .l{width:52px;height:1px;background:linear-gradient(90deg,rgba(212,175,106,0),#D4AF6A)}
+.deco .r{width:52px;height:1px;background:linear-gradient(90deg,#D4AF6A,rgba(212,175,106,0))}
+.deco .o{width:7px;height:7px;transform:rotate(45deg);border:1px solid #D4AF6A}.deco .f{width:6px;height:6px;transform:rotate(45deg);background:#D4AF6A}
+.glass{background:linear-gradient(180deg,rgba(30,28,42,.62),rgba(14,13,22,.74));-webkit-backdrop-filter:blur(18px) saturate(1.2);backdrop-filter:blur(18px) saturate(1.2);
+border:1px solid rgba(212,175,106,.28)}
+.notice{margin:22px 0 0;padding:14px 16px;border-radius:18px;display:flex;gap:14px;align-items:flex-start;font-size:14px;line-height:1.5}
+.spinner{display:block;flex:none;border-radius:50%;border:3px solid rgba(212,175,106,.2);border-top-color:#F5E1A4;border-right-color:#D4AF6A;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+h1{margin:26px 0 0;text-align:center;font-size:28px;font-weight:600}
+.sub{margin-top:4px;text-align:center;font-size:13px;color:var(--muted)}
+.stage{position:relative;margin:22px auto 0}
+.print{position:relative;width:100%;border-radius:6px;overflow:hidden;box-shadow:0 24px 50px rgba(0,0,0,.6),0 0 0 1px rgba(212,175,106,.35)}
 .print img{display:block;width:100%;height:100%}
 .print video{position:absolute;object-fit:cover;background:transparent}
-.print img.over{position:absolute;inset:0;pointer-events:none}
-.single video{display:block;width:100%;max-height:68vh;background:#1E1A16;border:12px solid var(--paper);border-bottom-width:40px;
-box-shadow:0 14px 26px var(--shadow)}
-.strip{display:grid;gap:8px;padding:10px 10px 34px;background:var(--paper);box-shadow:0 14px 26px var(--shadow)}
-.strip video{display:block;width:100%;height:auto;object-fit:cover;background:#1E1A16}
-.dl{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:26px 0 10px}
-a.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:12px;background:var(--brick);color:#F6F0E2;
-text-decoration:none;font-family:"Patrick Hand",cursive;font-size:22px;line-height:1.1;box-shadow:0 4px 0 var(--brick-dark);
-transition:transform .08s,box-shadow .08s}
-a.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--brick-dark)}
-a.btn.small{padding:10px 16px;font-size:19px}
-a.btn svg{width:18px;height:18px;flex:none}
-details.cells{margin:0 0 6px;color:var(--muted);font-size:12px}details.cells summary{cursor:pointer}
-details.cells .dl{margin:10px 0 4px}
-.note{display:inline-block;margin:14px 0 4px;padding:8px 14px;background:var(--paper);color:#4A3426;font-size:12px;
-transform:rotate(.8deg);box-shadow:0 3px 8px var(--shadow)}
-p{color:var(--muted);font-size:12px;margin:8px 0}
-.gone{margin-top:22vh}
-footer{margin-top:22px;font-size:11px;color:var(--muted);letter-spacing:.08em}
-.book{position:relative;margin:0 auto;width:min(100%,62vh);transform:rotate(-.8deg)}
-.book::before{content:"";position:absolute;z-index:2;top:-12px;left:50%;width:96px;height:26px;margin-left:-48px;
-background:rgba(201,154,59,.78);transform:rotate(3deg);box-shadow:0 1px 2px rgba(30,26,22,.25)}
-.leaves{display:flex;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;background:var(--paper);
-box-shadow:0 14px 26px var(--shadow);aspect-ratio:1}
-.leaves::-webkit-scrollbar{display:none}
-.leaf{flex:0 0 100%;min-width:0;margin:0;scroll-snap-align:center}
-.leaf img{display:block;width:100%;height:100%;object-fit:contain}
-.turn{position:absolute;top:50%;width:40px;height:40px;margin-top:-20px;border:0;border-radius:50%;background:var(--paper);
-color:var(--ink);font:28px/36px "Patrick Hand",cursive;box-shadow:0 3px 8px var(--shadow);cursor:pointer}
-.turn.prev{left:-10px}.turn.next{right:-10px}
-.count{margin-top:14px;font-family:"Patrick Hand",cursive;font-size:20px}`;
+.print .vwait{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+background:rgba(11,11,18,.55);color:var(--ivory);font-size:12px;letter-spacing:.04em}
+.pwait{margin-top:22px;padding:60px 20px;border-radius:18px;text-align:center;color:var(--muted)}
+.actions{margin:26px 0 0;display:flex;flex-direction:column;gap:12px}
+.btn-gold,.btn-line{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;border-radius:999px;
+font:600 17px "Be Vietnam Pro","Hiragino Sans",sans-serif;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn-gold{border:0;background:linear-gradient(180deg,#F5E1A4 0%,#E6C886 40%,#D4AF6A 70%,#B8914F 100%);color:#1A1408;
+box-shadow:inset 0 0 0 1px rgba(255,244,214,.6),inset 0 -3px 0 rgba(120,85,30,.35),0 10px 30px rgba(212,175,106,.28),0 2px 6px rgba(0,0,0,.5);
+transition:transform 140ms cubic-bezier(.2,.8,.2,1),box-shadow 140ms}
+.btn-gold::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.8),rgba(255,255,255,0));
+transform:skewX(-20deg);animation:shimmer 3s cubic-bezier(.4,0,.2,1) infinite;pointer-events:none}
+@keyframes shimmer{0%{left:-60%}28%{left:130%}100%{left:130%}}
+.btn-gold:active{transform:translateY(3px) scale(.97);box-shadow:inset 0 0 0 1px rgba(255,244,214,.7),0 0 44px rgba(245,225,164,.75)}
+.btn-gold.off{background:linear-gradient(180deg,#4a4434,#3a3528);color:rgba(248,243,232,.45);box-shadow:inset 0 0 0 1px rgba(212,175,106,.25);pointer-events:none}
+.btn-gold.off::after{display:none}
+.btn-line{border:1.5px solid rgba(212,175,106,.7);background:rgba(11,11,18,.35);color:var(--ivory);font-weight:500}
+.btn-line:active{background:rgba(212,175,106,.16)}
+.btn-gold svg,.btn-line svg{width:18px;height:18px;flex:none}
+section{margin:40px 0 0}
+.sechead{display:flex;align-items:baseline;justify-content:space-between}
+h2{margin:0;font-size:22px;font-weight:600}
+.count{font-size:13px;color:var(--muted)}
+.grid{margin-top:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
+.tile{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#17141c;
+box-shadow:0 0 0 1px rgba(212,175,106,.3),0 8px 20px rgba(0,0,0,.4);color:var(--muted);font-size:12px}
+.tile img,.tile video{display:block;width:100%;height:100%;object-fit:cover}
+.links{margin-top:8px;display:flex;align-items:center;gap:8px;font-size:14px}
+.links .n{color:var(--muted)}.links .dot{color:rgba(248,243,232,.4)}
+.lnk{font-weight:500;color:var(--gold-l);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(245,225,164,.45)}
+.lnk.muted{color:var(--muted);text-decoration:none}
+.note{margin:30px 0 0;text-align:center;font-size:13px;color:var(--rose)}
+p{color:var(--muted);font-size:12px;text-align:center;margin:10px 0}
+.langs a{color:var(--gold-l)}.langs b{color:var(--ivory)}
+footer{margin-top:40px;text-align:center}
+footer .deco .l,footer .deco .r{width:40px}
+footer .tag{margin-top:12px;font-size:12px;letter-spacing:.12em;color:rgba(248,243,232,.5)}
+.gone{margin-top:18vh}
+.corner{position:absolute;width:46px;height:46px;opacity:.8;pointer-events:none}
+.c1{left:12px;top:12px}.c2{right:12px;top:12px;transform:scaleX(-1)}
+.dust{position:absolute;border-radius:50%;background:radial-gradient(circle,#FFF6DA 0%,#F5E1A4 40%,rgba(212,175,106,0) 72%);
+box-shadow:0 0 6px 1px rgba(245,225,164,.55);pointer-events:none;animation:drift ease-in-out infinite alternate,twinkle ease-in-out infinite}
+@keyframes drift{to{transform:translateY(-70px)}}
+@keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.95}}
+details.bm{display:none}
+@media (prefers-reduced-motion:reduce){.gold,.btn-gold::after,.dust{animation:none}}`;
 
-// Fonts come from this Worker (public/fonts, static assets), not Google Fonts:
-// viewers' IPs are not sent to a third party (QA-025).
-const FONTS =
-  `@font-face{font-family:"Patrick Hand";src:url(/lde/fonts/PatrickHand-Regular.ttf) format("truetype");font-display:swap}` +
-  `@font-face{font-family:"Space Mono";src:url(/lde/fonts/SpaceMono-Regular.ttf) format("truetype");font-display:swap}`;
+const FONTS = [
+  ['Playfair Display', 400, 'normal', 'PlayfairDisplay-Regular'],
+  ['Playfair Display', 600, 'normal', 'PlayfairDisplay-SemiBold'],
+  ['Playfair Display', 700, 'normal', 'PlayfairDisplay-Bold'],
+  ['Playfair Display', 400, 'italic', 'PlayfairDisplay-Italic'],
+  ['Be Vietnam Pro', 400, 'normal', 'BeVietnamPro-Regular'],
+  ['Be Vietnam Pro', 500, 'normal', 'BeVietnamPro-Medium'],
+  ['Be Vietnam Pro', 600, 'normal', 'BeVietnamPro-SemiBold'],
+]
+  .map(([f, w, st, file]) => `@font-face{font-family:"${f}";font-weight:${w};font-style:${st};src:url(${BASE}/fonts/${file}.ttf) format("truetype");font-display:swap}`)
+  .join('');
 
-// Pages only ever load their own videos / images / fonts; the one inline
-// script syncs the cells / turns album pages (the only user text in HTML is an
-// album title, escaped).
+/// The design's art-deco corner (120-unit SVG at 46 px), top left and mirrored top right.
+const CORNER =
+  '<path d="M1 119V1h118"/><path d="M10 86V10h76"/><path d="M10 46a36 36 0 0 1 36-36"/><path d="M10 31a21 21 0 0 1 21-21"/>' +
+  '<path d="M10 10l20 20"/><path d="M36 28l6 6-6 6-6-6z" fill="#D4AF6A"/><path d="M1 64h6M64 1v6"/>';
+const corners = ['c1', 'c2']
+  .map((c) => `<svg class="corner ${c}" aria-hidden="true" viewBox="0 0 120 120" fill="none" stroke="#D4AF6A" stroke-width="2.4">${CORNER}</svg>`)
+  .join('');
+
+/// LOW glitter (design: the guest page gets the lightest level): 24 drifting, twinkling dots.
+const DUST = Array.from({ length: 24 }, (_, i) => {
+  const r = (k) => ((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1 + 1) % 1;
+  const size = (1.8 + r(1) * (r(2) < 0.18 ? 5.7 : 2.2)).toFixed(1);
+  return `<span class="dust" style="left:${(r(3) * 100).toFixed(1)}%;top:${(r(4) * 100).toFixed(1)}%;width:${size}px;height:${size}px;` +
+    `animation-duration:${(8 + r(5) * 8).toFixed(1)}s,${(1.8 + r(6) * 2.2).toFixed(1)}s;animation-delay:-${(r(7) * 10).toFixed(1)}s,-${(r(8) * 4).toFixed(1)}s"></span>`;
+}).join('');
+
 const SECURITY_HEADERS = {
   'referrer-policy': 'no-referrer',
   'x-content-type-options': 'nosniff',
@@ -165,20 +208,28 @@ const SECURITY_HEADERS = {
 function page(lang, title, body) {
   return new Response(
     `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
-      `<meta name="robots" content="noindex"><meta name="theme-color" content="#5E6B4E"><title>${escapeHtml(title)}</title>` +
+      `<meta name="robots" content="noindex"><meta name="theme-color" content="#0B0B12"><title>${escapeHtml(title)}</title>` +
       `<style>${FONTS}${STYLE}</style></head>` +
-      `<body><main>${body}</main></body></html>`,
+      `<body><div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;pointer-events:none">${DUST}</div>${corners}` +
+      `<main>${body}<footer>${DECO}<div class="tag">LPE SUM UP · PHOTOBOOTH</div></footer></main></body></html>`,
     {
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        // The language comes from Accept-Language: never cached anyway
-        // (no-store), and Vary keeps any cache in between honest.
+        // The language comes from Accept-Language: never cached, and Vary keeps any cache honest.
         'cache-control': 'no-store',
         vary: 'Accept-Language',
         ...SECURITY_HEADERS,
       },
     },
   );
+}
+
+const DECO = '<div class="deco" aria-hidden="true"><span class="l"></span><span class="o"></span><span class="f"></span><span class="o"></span><span class="r"></span></div>';
+
+/// "LPE *Sum Up*": the first word bold, the rest italic, in moving gold.
+function brandTitle(title) {
+  const [head, ...tail] = String(title).trim().split(/\s+/);
+  return `<div class="serif gold brandTitle">${escapeHtml(head ?? '')}${tail.length ? ` <i>${escapeHtml(tail.join(' '))}</i>` : ''}</div>`;
 }
 
 const DL_ICON =
@@ -275,6 +326,9 @@ const LANG_NAMES = { vi: 'Tiếng Việt', en: 'English', ja: '日本語' };
 
 export const W = {
   vi: {
+    yourPhotos: 'Ảnh của bạn',
+    eachPhoto: 'Từng ảnh',
+    counts: '{p} ảnh · {c} clip',
     composing: 'Đang ghép video… {s}s',
     composedSaved: 'Đã tải · Lưu vào Ảnh',
     composeAgain: 'Tải lại video',
@@ -297,6 +351,9 @@ export const W = {
     help: '"Tải video ghép": cả tấm ảnh với các clip chạy cùng lúc, thành một video. Chạm "Ảnh" hoặc "Clip" để tải từng cái. Trên iPhone: mở bằng Safari.',
   },
   en: {
+    yourPhotos: 'Your photos',
+    eachPhoto: 'Each photo',
+    counts: '{p} photos · {c} clips',
     composing: 'Making your video… {s}s',
     composedSaved: 'Downloaded · save to Photos',
     composeAgain: 'Download again',
@@ -319,6 +376,9 @@ export const W = {
     help: '"Download the video": the whole print with every clip playing, as one video. Tap "Photo" or "Clip" to download one by one. On iPhone, open this page in Safari.',
   },
   ja: {
+    yourPhotos: 'あなたの写真',
+    eachPhoto: '1枚ずつ',
+    counts: '写真{p}枚 · 動画{c}本',
     composing: '動画を作成中… {s}秒',
     composedSaved: 'ダウンロード完了 · 写真に保存',
     composeAgain: 'もう一度ダウンロード',
@@ -424,7 +484,8 @@ export function parseBoothLayout(text) {
   const rects = parseRects(JSON.stringify(j.rects), n);
   const aspect = Number(j.aspect);
   if (!rects || !Number.isFinite(aspect) || aspect < 0.2 || aspect > 5) return null;
-  return { aspect, rects };
+  // The event text for the page header (plain, one line, ≤ 60 characters each).
+  return { aspect, rects, title: cleanTitle(j.title), subtitle: cleanTitle(j.subtitle), date: cleanTitle(j.date) };
 }
 
 /// The session's files: name → { uploaded, title }.
@@ -446,36 +507,12 @@ const boothGone = (env, lang) => {
   const r = page(
     lang,
     w(lang, 'gone'),
-    `<div class="gone"><div class="brand">Photobooth</div><h1>${w(lang, 'gone')}</h1>` +
-      `<p>${w(lang, 'goneText', { n: boothTtl(env) })}</p></div>` +
+    `<div class="gone"><header><div class="eyebrow">Photobooth</div>${DECO}</header>` +
+      `<h1 class="serif">${w(lang, 'gone')}</h1><p>${w(lang, 'goneText', { n: boothTtl(env) })}</p></div>` +
       langLinks(lang),
   );
   return new Response(r.body, { status: 404, headers: r.headers });
 };
-
-const BOOTH_STYLE = `<style>
-.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:26px 0 6px}
-.bgrid figure{margin:0;padding:8px 8px 10px;background:var(--paper);box-shadow:0 8px 16px var(--shadow)}
-.bgrid figure:nth-child(odd){transform:rotate(-1deg)}.bgrid figure:nth-child(even){transform:rotate(1deg)}
-.bgrid img,.bgrid video{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;background:#1E1A16}
-.bgrid .wait{display:flex;align-items:center;justify-content:center;aspect-ratio:3/2;background:var(--cloth);color:var(--muted);font-size:12px}
-.bgrid .links{display:flex;justify-content:center;gap:8px;margin-top:8px}
-.bgrid .links a{color:var(--brick);font-size:13px}
-.pwait{padding:60px 20px;background:var(--paper);box-shadow:0 14px 26px var(--shadow)}
-details.bm{display:none}
-.langs{margin-top:18px;font-size:13px}.langs a{color:var(--brick)}
-:lang(ja) body{font-family:"Space Mono",ui-monospace,"Hiragino Sans","Noto Sans JP",sans-serif}
-:lang(ja) h1,:lang(ja) a.btn{font-family:"Patrick Hand","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif}
-.print .vwait{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-background:rgba(30,26,22,.45);color:#F6F0E2;font-size:13px;letter-spacing:.04em}
-.spin{width:28px;height:28px;border:3px solid rgba(246,240,226,.35);border-top-color:#F6F0E2;border-radius:50%;animation:sp 1s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.vnote{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto 18px;padding:10px 16px;max-width:440px;
-background:var(--paper);color:#4A3426;font-size:13px;box-shadow:0 3px 8px var(--shadow)}
-.vnote .spin{width:18px;height:18px;border-color:rgba(74,52,38,.25);border-top-color:#4A3426;flex:none}
-a.btn.off{opacity:.55;pointer-events:none}
-.bgrid .muted{color:var(--muted);font-size:12px}
-</style>`;
 
 async function boothView(env, id, now, ctx, lang = 'vi') {
   const files = await boothFiles(env, id);
@@ -492,79 +529,81 @@ async function boothView(env, id, now, ctx, lang = 'vi') {
     layout = o ? parseBoothLayout(new TextDecoder().decode(await new Response(o.body).arrayBuffer())) : null;
   }
   const count = layout?.rects.length ?? 4;
-  // Nothing yet (the QR is printed before the upload starts) or still arriving: reload until complete.
+  // Nothing yet (the QR is printed before the upload starts) or still arriving: keep checking.
   const waiting = !times.length || (boothFilesFor(count).some((n) => !has(n)) && now() - first < BOOTH_WAIT_MS);
-  const title = files['print.jpg']?.title || 'Photobooth';
+  const title = layout?.title || files['print.jpg']?.title || 'Photobooth';
   const src = (n) => `${BASE}/b/${id}/${n}`;
-  const dl = (n, label) => `<a href="${src(n)}?dl=1" download>${label}</a>`;
   const t = (key, vars) => w(lang, key, vars);
   const nums = Array.from({ length: count }, (_, i) => i + 1);
   // Clips come last (exported on the iPad after the photos): say so instead of a still that looks final.
   const clipsComing = waiting && nums.some((i) => !has(`${i}.mp4`));
-  const SPIN = '<span class="spin" aria-hidden="true"></span>';
+  const spin = (px) => `<span class="spinner" aria-hidden="true" style="width:${px}px;height:${px}px${px < 20 ? ';border-width:2px' : ''}"></span>`;
+
+  const header =
+    `<header><div class="eyebrow">${escapeHtml([layout?.subtitle, new Date(now()).getUTCFullYear()].filter(Boolean).join(' '))}</div>` +
+    brandTitle(title) + DECO + `</header>`;
+  const notice = waiting && (clipsComing || !has('print.jpg'))
+    ? `<div class="glass notice" role="status">${spin(22)}<span>${has('print.jpg') ? t('videosComing') : t('uploading')}</span></div>`
+    : '';
 
   let print;
   if (!has('print.jpg')) {
-    print = `<div class="pwait">${t('uploading')}</div>`;
+    print = `<div class="glass pwait">${t('uploading')}</div>`;
   } else {
-    // Like Lensly's /v/ strips: each Live clip plays in its photo window of the print.
+    // Like Lensly's strips: each Live clip plays in its photo window of the print.
     const live = layout ? nums.filter((i) => has(`${i}.mp4`)) : [];
     const pct = (v) => `${(v * 100).toFixed(3)}%`;
+    const box = ([x, y, w, h]) => `left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}`;
     const videos = live
-      .map((i) => {
-        const [x, y, w, h] = layout.rects[i - 1];
-        return `<video src="${src(`${i}.mp4`)}" muted autoplay playsinline preload="auto" ` +
-          `style="left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}"></video>`;
-      })
+      .map((i) => `<video src="${src(`${i}.mp4`)}" muted autoplay playsinline preload="auto" style="${box(layout.rects[i - 1])}"></video>`)
       .join('');
     // Windows whose clip has not arrived: the still stays, with "Đang tải video…" over it.
     const pending = clipsComing && layout
-      ? nums
-          .filter((i) => !has(`${i}.mp4`))
-          .map((i) => {
-            const [x, y, w, h] = layout.rects[i - 1];
-            return `<div class="vwait" style="left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}">${SPIN}${t('videoLoading')}</div>`;
-          })
-          .join('')
+      ? nums.filter((i) => !has(`${i}.mp4`)).map((i) => `<div class="vwait" style="${box(layout.rects[i - 1])}">${spin(18)}${t('videoLoading')}</div>`).join('')
       : '';
     const aspect = layout?.aspect ?? 1200 / 1776;
     const compose = live.length && !clipsComing;
     print =
-      (clipsComing
-        ? `<div class="vnote">${SPIN}<span>${t('videosComing')}</span></div>`
-        : '') +
-      `<div class="stage" style="width:min(100%, calc(68vh * ${aspect}))">` +
+      `<div class="stage" style="width:min(100%, calc(62vh * ${aspect}))">` +
       `<div class="print" style="aspect-ratio:${aspect}"><img src="${src('print.jpg')}" alt="${t('printAlt')}">${videos}${pending}</div></div>` +
-      `<div class="dl">` +
+      `<div class="actions">` +
       (compose
-        ? `<a class="btn" id="compose" href="#" role="button">${DL_ICON}<span>${t('downloadComposed')}</span></a>`
+        ? `<a class="btn-gold" id="compose" href="#" role="button">${DL_ICON}<span>${t('downloadComposed')}</span></a>`
         : clipsComing
-          ? `<a class="btn off" aria-disabled="true">${DL_ICON}<span>${t('videosUploading')}</span></a>`
+          ? `<a class="btn-gold off" aria-disabled="true">${spin(18)}<span>${t('videosUploading')}</span></a>`
           : '') +
-      `<a class="btn${compose || clipsComing ? ' small' : ''}" href="${src('print.jpg')}?dl=1" download>${DL_ICON}${t('downloadPrint')}</a></div>` +
+      `<a class="btn-line" href="${src('print.jpg')}?dl=1" download>${DL_ICON}${t('downloadPrint')}</a></div>` +
       (live.length ? SYNC_SCRIPT : '') +
       (compose ? `<details class="cells bm" hidden></details>` + composeScript(id, live.map((i) => layout.rects[i - 1]), lang) : '');
   }
+
+  const clips = nums.filter((i) => has(`${i}.mp4`)).length;
   const cells = nums
     .map((i) => {
       const jpg = `${i}.jpg`, mp4 = `${i}.mp4`;
       const media = has(jpg)
-        ? `<img src="${src(jpg)}" alt="${t('photo')} ${i}">`
-        : has(mp4)
-          ? `<video src="${src(mp4)}" muted autoplay loop playsinline preload="metadata"></video>`
-          : `<div class="wait">${waiting ? t('loading') : t('none')}</div>`;
-      const clip = has(mp4) ? dl(mp4, t('clip')) : waiting ? `<span class="muted">${t('clipLoading')}</span>` : '';
-      const links = [has(jpg) ? dl(jpg, t('photo')) : '', clip].filter(Boolean).join(' · ');
-      return `<figure>${media}<div class="links">${links || '&nbsp;'}</div></figure>`;
+        ? `<img src="${src(jpg)}" alt="${t('photo')} ${i}" loading="lazy">`
+        : waiting ? `${spin(20)}` : t('none');
+      const photo = has(jpg) ? `<a class="lnk" href="${src(jpg)}?dl=1" download>${t('photo')}</a>` : '';
+      const clip = has(mp4)
+        ? `<a class="lnk" href="${src(mp4)}?dl=1" download>${t('clip')}</a>`
+        : waiting ? `<span class="lnk muted">${t('clipLoading')}</span>` : '';
+      return `<div><div class="tile">${media}</div><div class="links"><span class="n">#${i}</span>` +
+        [photo, clip].filter(Boolean).join('<span class="dot">·</span>') + `</div></div>`;
     })
     .join('');
+
   return page(
     lang,
     title,
-    BOOTH_STYLE +
-      `<div class="brand">Photobooth</div><h1>${escapeHtml(title)}</h1>` +
+    header +
+      notice +
+      `<h1 class="serif">${t('yourPhotos')}</h1>` +
+      (layout?.date ? `<div class="sub">${escapeHtml(layout.date)}</div>` : '') +
       print +
-      `<div class="bgrid">${cells}</div>` +
+      `<section><div class="sechead"><h2 class="serif">${t('eachPhoto')}</h2>` +
+      `<span class="count">${t('counts', { p: nums.filter((i) => has(`${i}.jpg`)).length, c: clips })}</span></div>` +
+      `<div class="grid">${cells}</div></section>` +
       (times.length ? `<div class="note">${t('saveBefore', { date: dateFor(lang, expiresAt(first, boothTtl(env))) })}</div>` : '') +
       `<p>${escapeHtml(t('help'))}</p>` +
       langLinks(lang) +
