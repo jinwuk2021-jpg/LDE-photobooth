@@ -76,26 +76,24 @@ void main() {
 
   group('print layout', () {
     for (final layout in BoothLayout.values) {
-      test('${layout.label}: windows, captions and QR fit the card and never overlap', () {
+      test('${layout.label}: windows, title and QR fit the card and never overlap', () {
         final card = Offset.zero & layout.size;
         final g = PrintGeometry.of(layout);
         expect(g.cells, hasLength(layout.picks));
-        expect(g.qrs, hasLength(1));
-        final boxes = [...g.cells, ...g.qrs, for (final c in g.captions) c.rect];
+        // 3 Cut's title is turned inside its band; the others sit under the photos.
+        final boxes = [...g.cells, g.qr, if (g.band == null) g.title];
         for (final r in boxes) {
           expect(card.contains(r.topLeft) && card.contains(r.bottomRight - const Offset(1, 1)), isTrue, reason: '$r');
         }
         for (var i = 0; i < boxes.length; i++) {
           for (var j = i + 1; j < boxes.length; j++) {
-            expect(
-              boxes[i].intersect(boxes[j]).isEmpty ||
-                  boxes[i].intersect(boxes[j]).width <= 0 ||
-                  boxes[i].intersect(boxes[j]).height <= 0,
-              isTrue,
-              reason: '${boxes[i]} × ${boxes[j]}',
-            );
+            final x = boxes[i].intersect(boxes[j]);
+            expect(x.width <= 0 || x.height <= 0, isTrue, reason: '${boxes[i]} × ${boxes[j]}');
           }
         }
+        // QR: 180 px (15 mm), at least 40 px (3.3 mm) from every edge.
+        expect((g.qr.width, g.qr.height), (180.0, 180.0));
+        expect(g.qr.left >= 40 && g.qr.top >= 40 && card.right - g.qr.right >= 40 && card.bottom - g.qr.bottom >= 40, isTrue, reason: '${g.qr}');
         // Each card holds the same postcard, landscape or not.
         expect({layout.size.width, layout.size.height}, {1200.0, 1776.0});
       });

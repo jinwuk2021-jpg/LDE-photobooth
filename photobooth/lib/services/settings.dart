@@ -8,10 +8,14 @@ class BoothSettings extends ChangeNotifier {
   BoothSettings(this._prefs);
   final SharedPreferences _prefs;
 
-  String get title => _prefs.getString('title') ?? 'Photobooth';
+  String get title => _prefs.getString('title') ?? 'LPE Sum Up';
   set title(String v) => _set('title', v.trim());
 
-  /// Second line on the print, e.g. "23.11.2026 · Hà Nội".
+  /// Shown with the date ("[date] · Tiệc tổng kết cuối năm") on the print and the start screen.
+  String get subtitle => _prefs.getString('subtitle') ?? 'Tiệc tổng kết cuối năm';
+  set subtitle(String v) => _set('subtitle', v.trim());
+
+  /// The date line, e.g. "23.12.2026".
   String get dateLine => _prefs.getString('dateLine') ?? _today();
   set dateLine(String v) => _set('dateLine', v.trim());
 

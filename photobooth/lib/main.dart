@@ -19,7 +19,7 @@ import 'screens/thanks_screen.dart';
 import 'services/printer.dart';
 import 'services/settings.dart';
 import 'services/upload_queue.dart';
-import 'ui/tokens.dart';
+import 'ui/lux.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +38,8 @@ Future<void> main() async {
     uploads: UploadQueue(docs: docs, stateFile: File(p.join(support.path, 'upload_queue.json')))..load(),
     prints: PrintQueue(prefs, settings, docs)..load(),
   );
+  // Playfair Display + Be Vietnam Pro (fetched once, then cached by google_fonts).
+  await LuxFonts.warmUp();
   runApp(BoothApp(booth: booth));
 }
 
@@ -51,9 +53,9 @@ class BoothApp extends StatelessWidget {
       title: 'Photobooth',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Palette.brick, surface: Palette.paper),
-        scaffoldBackgroundColor: Palette.paper,
-        fontFamily: Fonts.mono,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(seedColor: Lux.champagne, brightness: Brightness.dark, surface: const Color(0xFF14121E)),
+        scaffoldBackgroundColor: Lux.night,
       ),
       home: Home(booth: booth),
     );
@@ -132,12 +134,12 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final screen = switch (_stage) {
-      Stage.starting => const Center(child: CircularProgressIndicator(color: Palette.brick)),
-      Stage.noCamera => const Center(
+      Stage.starting => const Center(child: CircularProgressIndicator(color: Lux.champagne)),
+      Stage.noCamera => Center(
         child: Text(
           'Chưa có quyền camera.\nVào Cài đặt → Photobooth → bật Camera, rồi mở lại app.',
           textAlign: TextAlign.center,
-          style: TextStyles.title,
+          style: LuxFonts.serif(size: 32),
         ),
       ),
       Stage.idle => IdleScreen(booth: booth, onStart: () => _go(Stage.layout)),
@@ -162,12 +164,15 @@ class _HomeState extends State<Home> {
       Stage.thanks => ThanksScreen(finished: _finished!, onDone: _reset),
     };
     return Scaffold(
-      backgroundColor: Palette.charcoal,
+      backgroundColor: Lux.night,
       body: Listener(
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => _touch(),
+        // Fade + scale 1.02 → 1: 380 ms in, 200 ms out.
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
+          duration: const Duration(milliseconds: 380),
+          reverseDuration: const Duration(milliseconds: 200),
+          transitionBuilder: luxTransition,
           child: KeyedSubtree(key: ValueKey(_stage), child: screen),
         ),
       ),

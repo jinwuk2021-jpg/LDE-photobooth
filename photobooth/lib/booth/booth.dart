@@ -125,7 +125,14 @@ class Booth {
 
     final photos = [for (final i in guest.picks) developed[i]];
     final printImage = await renderPrint(
-      PrintSpec(layout: guest.layout, photos: photos, title: title, dateLine: settings.dateLine, qrUrl: url),
+      PrintSpec(
+        layout: guest.layout,
+        photos: photos,
+        title: title,
+        dateLine: settings.dateLine,
+        subtitle: settings.subtitle,
+        qrUrl: url,
+      ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);
     if (!PRINTING) {

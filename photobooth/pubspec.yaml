@@ -18,6 +18,7 @@ dependencies:
   http: ^1.6.0
   qr: ^3.0.2
   image_picker: ^1.2.4
+  google_fonts: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -30,12 +31,3 @@ flutter:
   shaders:
     - shaders/film.frag
     - shaders/skin.frag
-  fonts:
-    - family: PatrickHand
-      fonts:
-        - asset: assets/fonts/PatrickHand-Regular.ttf
-    - family: SpaceMono
-      fonts:
-        - asset: assets/fonts/SpaceMono-Regular.ttf
-        - asset: assets/fonts/SpaceMono-Bold.ttf
-          weight: 700

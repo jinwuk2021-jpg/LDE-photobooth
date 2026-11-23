@@ -8,12 +8,12 @@ import '../booth/booth.dart';
 import '../config.dart';
 import '../booth/print_layout.dart';
 import '../camera/filters.dart';
-import '../ui/tokens.dart';
-import '../ui/widgets.dart';
+import '../ui/lux.dart';
+import '../ui/sparkle.dart';
 
-/// Pick the frame's photos (tap order = print order) and a filter, with the
-/// print preview beside. "Chụp lại" / "In". A visible countdown: when it runs
-/// out the first shots not picked fill the frame and it prints by itself.
+/// 4 · Pick the frame's photos (tap order = print order, gold number badges) and a filter, with
+/// the print preview in a glass panel beside. A countdown pill (red and beating for the last
+/// 10 s): when it runs out the first shots not picked fill the frame and it finishes by itself.
 class PickScreen extends StatefulWidget {
   const PickScreen({
     super.key,
@@ -158,158 +158,94 @@ class _PickScreenState extends State<PickScreen> {
   @override
   Widget build(BuildContext context) {
     final guest = widget.guest;
-    return ColoredBox(
-      color: Palette.paper,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(32, 20, 32, 24),
-          child: ListenableBuilder(
+    return DecoratedBox(
+      decoration: Lux.backdrop,
+      child: Stack(
+        children: [
+          const SparkleBackground(level: SparkleLevel.mid, seed: 45),
+          ListenableBuilder(
             listenable: guest,
-            builder: (context, _) => Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            builder: (context, _) => Stack(
               children: [
-                Expanded(flex: 3, child: _left(guest)),
-                const SizedBox(width: 32),
-                Expanded(flex: 2, child: _right(guest)),
+                Positioned(left: 40, top: 40, width: 680, bottom: 40, child: _left(guest)),
+                Positioned(left: 744, top: 40, right: 40, bottom: 40, child: _right(guest)),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _left(GuestSession guest) {
     final images = _images;
+    final need = guest.layout.picks;
+    final cols = guest.shots.length > 6 ? 4 : 3;
+    final tileH = cols == 4 ? 118.0 : 162.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                'Chọn ${guest.layout.picks} tấm đẹp nhất (${guest.picks.length}/${guest.layout.picks})',
-                style: TextStyles.title,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Chọn $need tấm đẹp nhất ', style: LuxFonts.serif(size: 38, weight: FontWeight.w600, height: 1.15)),
+                      GoldText('(${guest.picks.length}/$need)', style: LuxFonts.serif(size: 38, weight: FontWeight.w600, height: 1.15), sweep: false),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('Chạm để chọn · chạm lại để bỏ', style: LuxFonts.sans(size: 18, color: Lux.ivoryA(0.68))),
+                ],
               ),
             ),
-            _Clock(seconds: _secondsLeft),
+            const SizedBox(width: 16),
+            _TimerPill(seconds: _secondsLeft),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Chạm theo thứ tự muốn in. Chạm lại để bỏ chọn.',
-          style: TextStyles.body.copyWith(color: Palette.kraftInk),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: _failed
-              ? const Center(child: Text('Không xử lý được ảnh. Bấm "Chụp lại" nhé!', style: TextStyles.title))
-              : images == null
-              ? const Center(child: CircularProgressIndicator(color: Palette.brick))
-              : Column(
-                  children: [
-                    // Two rows: 3 + 3 shots, or 4 + 4 for 6 Cut.
-                    for (var row = 0; row < 2; row++)
-                      Expanded(
-                        child: Row(
-                          children: [
-                            for (var col = 0; col < (images.length + 1) ~/ 2; col++)
-                              Expanded(
-                                child: row * ((images.length + 1) ~/ 2) + col < images.length
-                                    ? _tile(guest, images, row * ((images.length + 1) ~/ 2) + col)
-                                    : const SizedBox(),
-                              ),
-                          ],
-                        ),
-                      ),
-                  ],
+        const SizedBox(height: 22),
+        if (_failed)
+          Expanded(child: Center(child: Text('Không xử lý được ảnh.\nBấm "Chụp lại" nhé!', textAlign: TextAlign.center, style: LuxFonts.serif(size: 32))))
+        else if (images == null)
+          const Expanded(child: Center(child: CircularProgressIndicator(color: Lux.champagne)))
+        else
+          GridView.count(
+            crossAxisCount: cols,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: ((680 - 16 * (cols - 1)) / cols) / tileH,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              for (var i = 0; i < images.length; i++)
+                _ShotTile(
+                  image: images[i],
+                  order: guest.picks.indexOf(i),
+                  dim: guest.complete && !guest.picks.contains(i),
+                  developing: _developing,
+                  onTap: () => guest.toggle(i),
                 ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(height: 132, child: _filters()),
-      ],
-    );
-  }
-
-  Widget _tile(GuestSession guest, List<ui.Image> images, int i) {
-    final order = guest.picks.indexOf(i);
-    final picked = order >= 0;
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: GestureDetector(
-        onTap: () => guest.toggle(i),
-        child: Center(
-          child: AspectRatio(
-            aspectRatio: images[i].width / images[i].height,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: picked ? Palette.brick : Palette.paper, width: 6),
-                    boxShadow: const [BoxShadow(color: Color(0x401E1A16), blurRadius: 6, offset: Offset(0, 3))],
-                  ),
-                  child: RawImage(image: images[i], fit: BoxFit.cover),
-                ),
-                if (picked)
-                  Positioned(
-                    left: 10,
-                    top: 10,
-                    child: CircleAvatar(
-                      radius: 26,
-                      backgroundColor: Palette.brick,
-                      child: Text('${order + 1}', style: TextStyles.button.copyWith(fontSize: 32)),
-                    ),
-                  ),
-                if (_developing) const ColoredBox(color: Color(0x33EFE6D0)),
-              ],
-            ),
+            ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _filters() {
-    return Row(
-      children: [
-        for (final f in BoothFilter.values)
-          Expanded(
-            child: GestureDetector(
-              onTap: f == _filter ? null : () => _develop(f),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: f == _filter ? Palette.brick : Palette.paperDeep, width: 4),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: _thumbs[f] == null
-                            ? const ColoredBox(color: Palette.paperDeep)
-                            : RawImage(image: _thumbs[f], fit: BoxFit.cover, width: double.infinity),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      f.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyles.label.copyWith(
-                        fontSize: 15,
-                        fontWeight: f == _filter ? FontWeight.w700 : FontWeight.w400,
-                        color: f == _filter ? Palette.brickInk : Palette.coffee,
-                      ),
-                    ),
-                  ],
-                ),
+        const Spacer(),
+        Text('BỘ LỌC', style: LuxFonts.eyebrow(size: 14)),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (final f in BoothFilter.values)
+              _FilterChip(
+                name: f.label,
+                thumb: _thumbs[f],
+                on: f == _filter,
+                onTap: f == _filter || _printing ? null : () => _develop(f),
               ),
-            ),
-          ),
+          ],
+        ),
       ],
     );
   }
@@ -317,81 +253,263 @@ class _PickScreenState extends State<PickScreen> {
   Widget _right(GuestSession guest) {
     final images = _images;
     final s = widget.booth.settings;
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: guest.layout.size.aspectRatio,
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  boxShadow: [BoxShadow(color: Color(0x551E1A16), blurRadius: 16, offset: Offset(0, 8))],
+    final need = guest.layout.picks;
+    final aspect = guest.layout.size.aspectRatio;
+    // The print fitted into 362 × 300.
+    final previewW = aspect >= 362 / 300 ? 362.0 : 300 * aspect;
+    return Glass(
+      radius: 30,
+      padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+      child: Column(
+        children: [
+          Align(alignment: Alignment.centerLeft, child: Text('XEM TRƯỚC TẤM IN', style: LuxFonts.eyebrow(size: 14))),
+          const SizedBox(height: 22),
+          SizedBox(
+            height: 300,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  left: -24,
+                  right: -24,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(gradient: RadialGradient(colors: [Color(0x38D4AF6A), Color(0x00D4AF6A)], stops: [0, 0.7])),
+                  ),
                 ),
-                child: CustomPaint(
-                  painter: PrintPainter(
-                    PrintSpec(
-                      layout: guest.layout,
-                      photos: [
-                        for (var k = 0; k < guest.layout.picks; k++)
-                          k < guest.picks.length && images != null ? images[guest.picks[k]] : null,
-                      ],
-                      title: s.title,
-                      dateLine: s.dateLine,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  child: Container(
+                    key: ValueKey(Object.hashAll([...guest.picks, _filter, images])),
+                    width: previewW,
+                    height: previewW / aspect,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 50, offset: Offset(0, 24))],
+                      border: Border.all(color: const Color(0x59D4AF6A)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: CustomPaint(
+                        painter: PrintPainter(
+                          PrintSpec(
+                            layout: guest.layout,
+                            photos: [for (var k = 0; k < need; k++) k < guest.picks.length && images != null ? images[guest.picks[k]] : null],
+                            title: s.title,
+                            dateLine: s.dateLine,
+                            subtitle: s.subtitle,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            BigButton(
-              label: 'Chụp lại',
-              icon: Icons.replay,
-              outlined: true,
-              fontSize: 28,
-              onPressed: _printing ? null : widget.onRetake,
-            ),
-            const SizedBox(width: 20),
-            BigButton(
-              label: _printing ? 'Đang xử lý…' : (PRINTING ? 'In' : 'Xong'),
-              icon: Icons.print,
-              fontSize: 34,
-              onPressed: guest.complete && images != null && !_developing && !_printing ? _print : null,
-            ),
-          ],
-        ),
-      ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Khung ${guest.layout.label} · ', style: LuxFonts.serif(size: 24, weight: FontWeight.w600)),
+              GoldText(_filter.label, style: LuxFonts.serif(size: 24, weight: FontWeight.w600), sweep: false),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Ô 1 → $need theo thứ tự bạn chọn', style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.62))),
+          const Spacer(),
+          Container(
+            height: 1,
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0x00D4AF6A), Color(0x80D4AF6A), Color(0x00D4AF6A)])),
+          ),
+          Row(
+            children: [
+              LineButton(label: 'Chụp lại', icon: Icons.replay, width: 156, height: 88, fontSize: 21, onPressed: _printing ? null : widget.onRetake),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GoldButton(
+                  label: _printing ? 'Đang xử lý…' : (guest.complete ? (PRINTING ? 'In' : 'Xong') : 'Xong · còn ${need - guest.picks.length}'),
+                  icon: guest.complete && !_printing ? Icons.arrow_forward : null,
+                  iconAfter: true,
+                  fontSize: guest.complete ? 28 : 26,
+                  pulse: guest.complete && !_printing,
+                  onPressed: guest.complete && images != null && !_developing && !_printing ? _print : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Seconds left to pick, red for the last 10.
-class _Clock extends StatelessWidget {
-  const _Clock({required this.seconds});
+/// A shot: rounded, hairline gold; picked = shrinks a little, gold ring + glow, number badge pops.
+class _ShotTile extends StatelessWidget {
+  const _ShotTile({required this.image, required this.order, required this.dim, required this.developing, required this.onTap});
+  final ui.Image image;
+  final int order;
+  final bool dim;
+  final bool developing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = order >= 0;
+    const spring = Cubic(.34, 1.56, .64, 1);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
+        opacity: dim ? 0.42 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: AnimatedScale(
+          scale: on ? 0.965 : 1,
+          duration: const Duration(milliseconds: 220),
+          curve: spring,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                if (on) const BoxShadow(color: Color(0x73F5E1A4), blurRadius: 28),
+                const BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, 8)),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  RawImage(image: image, fit: BoxFit.cover),
+                  if (developing) const ColoredBox(color: Color(0x400B0B12)),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: on ? Lux.champagneLight : const Color(0x47D4AF6A), width: on ? 3 : 1),
+                    ),
+                  ),
+                  if (on)
+                    Positioned(
+                      left: 10,
+                      top: 10,
+                      child: TweenAnimationBuilder<double>(
+                        key: ValueKey(order),
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 260),
+                        curve: spring,
+                        builder: (context, k, child) => Transform.scale(scale: k, child: child),
+                        child: Container(
+                          width: 46,
+                          height: 46,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: Lux.button,
+                            boxShadow: [BoxShadow(color: Color(0x73000000), blurRadius: 14, offset: Offset(0, 4)), BoxShadow(color: Color(0x8CF5E1A4), blurRadius: 18)],
+                          ),
+                          child: Text('${order + 1}', style: LuxFonts.serif(size: 26, weight: FontWeight.w700, color: Lux.goldInk, height: 1)),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({required this.name, required this.thumb, required this.on, required this.onTap});
+  final String name;
+  final ui.Image? thumb;
+  final bool on;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 98,
+        child: Column(
+          children: [
+            AnimatedSlide(
+              offset: Offset(0, on ? -3 / 92 : 0),
+              duration: const Duration(milliseconds: 200),
+              curve: const Cubic(.34, 1.56, .64, 1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 92,
+                height: 92,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: on ? Lux.champagneLight : const Color(0x47D4AF6A), width: on ? 3 : 1),
+                  boxShadow: on ? const [BoxShadow(color: Color(0x73F5E1A4), blurRadius: 22)] : null,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: thumb == null ? const ColoredBox(color: Color(0xFF17141C)) : RawImage(image: thumb, fit: BoxFit.cover),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 36,
+              child: Text(
+                name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: LuxFonts.sans(size: 15, height: 1.2, weight: on ? FontWeight.w600 : FontWeight.w400, color: on ? Lux.champagneLight : Lux.ivoryA(0.75)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "⏱ 45 giây"; the last 10 s red, beating once a second.
+class _TimerPill extends StatelessWidget {
+  const _TimerPill({required this.seconds});
   final int seconds;
 
   @override
   Widget build(BuildContext context) {
     final urgent = seconds <= 10;
-    return AnimatedContainer(
+    final pill = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      height: 60,
+      padding: const EdgeInsets.fromLTRB(18, 0, 22, 0),
       decoration: BoxDecoration(
-        color: urgent ? Palette.brick : Palette.coffee,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(999),
+        color: urgent ? const Color(0x2EE0525A) : const Color(0x9914121E),
+        border: Border.all(color: urgent ? Lux.urgent : const Color(0x80D4AF6A)),
+        boxShadow: urgent ? const [BoxShadow(color: Color(0x59E0525A), blurRadius: 24)] : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.timer_outlined, color: Palette.paper, size: 28),
-          const SizedBox(width: 8),
-          Text('${seconds.clamp(0, 999)} giây', style: TextStyles.button.copyWith(fontSize: 28)),
+          Icon(Icons.timer_outlined, color: urgent ? Lux.urgentText : Lux.champagne, size: 26),
+          const SizedBox(width: 10),
+          Text(
+            '${seconds.clamp(0, 999)} giây',
+            style: LuxFonts.sans(size: 24, weight: FontWeight.w600, color: urgent ? Lux.urgentText : Lux.ivory).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+          ),
         ],
       ),
+    );
+    if (!urgent) return pill;
+    // A beat (1 → 1.06 → 1) at each new second.
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(seconds),
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 1000),
+      builder: (context, p, child) => Transform.scale(scale: 1 + 0.06 * Curves.easeInOut.transform(1 - (2 * p - 1).abs()), child: child),
+      child: pill,
     );
   }
 }

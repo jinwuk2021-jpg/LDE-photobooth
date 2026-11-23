@@ -9,7 +9,7 @@ import '../booth/print_layout.dart';
 import '../camera/skin_smooth.dart';
 import '../config.dart';
 import '../services/printer.dart';
-import '../ui/tokens.dart';
+import '../ui/lux.dart';
 
 /// Asks for the PIN, then opens the admin screen.
 Future<void> openAdmin(BuildContext context, Booth booth) async {
@@ -17,13 +17,13 @@ Future<void> openAdmin(BuildContext context, Booth booth) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Nhân viên', style: TextStyles.title),
+      title: Text('Nhân viên', style: LuxFonts.serif(size: 30)),
       content: TextField(
         controller: pin,
         autofocus: true,
         obscureText: true,
         keyboardType: TextInputType.number,
-        style: TextStyles.title,
+        style: LuxFonts.serif(size: 30),
         decoration: const InputDecoration(hintText: 'Mã PIN'),
         onSubmitted: (v) => Navigator.pop(context, v == ADMIN_PIN),
       ),
@@ -51,15 +51,18 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   late final _title = TextEditingController(text: widget.booth.settings.title);
   late final _date = TextEditingController(text: widget.booth.settings.dateLine);
+  late final _subtitle = TextEditingController(text: widget.booth.settings.subtitle);
 
   @override
   void dispose() {
     // Saved when leaving, so a half-typed title never reaches a print.
     widget.booth.settings
       ..title = _title.text
-      ..dateLine = _date.text;
+      ..dateLine = _date.text
+      ..subtitle = _subtitle.text;
     _title.dispose();
     _date.dispose();
+    _subtitle.dispose();
     super.dispose();
   }
 
@@ -90,10 +93,10 @@ class _AdminScreenState extends State<AdminScreen> {
   Widget build(BuildContext context) {
     final b = widget.booth;
     return Scaffold(
-      backgroundColor: Palette.paper,
+      backgroundColor: Lux.night,
       appBar: AppBar(
-        backgroundColor: Palette.paperDeep,
-        title: const Text('Quản lý photobooth', style: TextStyles.title),
+        backgroundColor: Lux.navy,
+        title: Text('Quản lý photobooth', style: LuxFonts.serif(size: 30)),
       ),
       body: ListenableBuilder(
         listenable: Listenable.merge([b.settings, b.prints, b.uploads]),
@@ -102,9 +105,9 @@ class _AdminScreenState extends State<AdminScreen> {
           children: [
             _section('Máy in'),
             if (!PRINTING)
-              const Text('Đang tắt in (PRINTING = false trong lib/config.dart).', style: TextStyles.body)
+              Text('Đang tắt in (PRINTING = false trong lib/config.dart).', style: LuxFonts.sans(size: 18))
             else ...[
-              Text(b.settings.printerName ?? 'Chưa chọn máy in', style: TextStyles.body),
+              Text(b.settings.printerName ?? 'Chưa chọn máy in', style: LuxFonts.sans(size: 18)),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 12,
@@ -123,8 +126,8 @@ class _AdminScreenState extends State<AdminScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              Text('Hàng đợi in', style: TextStyles.label.copyWith(fontWeight: FontWeight.w700)),
-              if (b.prints.jobs.isEmpty) const Text('Chưa có lệnh in nào.', style: TextStyles.body),
+              Text('Hàng đợi in', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)).copyWith(fontWeight: FontWeight.w700)),
+              if (b.prints.jobs.isEmpty) Text('Chưa có lệnh in nào.', style: LuxFonts.sans(size: 18)),
               for (final job in b.prints.jobs.take(20)) _jobRow(job),
             ],
 
@@ -136,10 +139,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   Container(
                     width: 240,
                     height: 160,
-                    color: Palette.paperDeep,
+                    color: Lux.navy,
                     child: b.startImage.existsSync()
                         ? Image.file(b.startImage, key: ValueKey(version), fit: BoxFit.contain)
-                        : const Center(child: Text('Chưa có ảnh', style: TextStyles.label)),
+                        : Center(child: Text('Chưa có ảnh', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)))),
                   ),
                   const SizedBox(width: 20),
                   FilledButton.icon(
@@ -165,20 +168,26 @@ class _AdminScreenState extends State<AdminScreen> {
             _section('Sự kiện'),
             TextField(
               controller: _title,
-              style: TextStyles.body,
-              decoration: const InputDecoration(labelText: 'Tiêu đề (màn chờ + ảnh in)'),
+              style: LuxFonts.sans(size: 18),
+              decoration: const InputDecoration(labelText: 'Tiêu đề (màn chờ + ảnh in), chữ đầu đậm, phần sau nghiêng'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _date,
-              style: TextStyles.body,
+              style: LuxFonts.sans(size: 18),
               decoration: const InputDecoration(labelText: 'Dòng ngày trên ảnh in'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _subtitle,
+              style: LuxFonts.sans(size: 18),
+              decoration: const InputDecoration(labelText: 'Dòng phụ (cạnh ngày, vd: Tiệc tổng kết cuối năm)'),
             ),
 
             _section('Ảnh'),
             Row(
               children: [
-                const Text('Làm mịn da: ', style: TextStyles.body),
+                Text('Làm mịn da: ', style: LuxFonts.sans(size: 18)),
                 SegmentedButton<SkinSmooth>(
                   segments: [for (final s in SkinSmooth.values) ButtonSegment(value: s, label: Text(s.label))],
                   selected: {b.settings.skin},
@@ -190,7 +199,7 @@ class _AdminScreenState extends State<AdminScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Text('Thời gian chọn ảnh: ', style: TextStyles.body),
+                Text('Thời gian chọn ảnh: ', style: LuxFonts.sans(size: 18)),
                 SegmentedButton<int>(
                   segments: [
                     for (final s in const [30, 60, 90, 120]) ButtonSegment(value: s, label: Text('${s}s')),
@@ -205,11 +214,11 @@ class _AdminScreenState extends State<AdminScreen> {
             Text(
               '${b.uploads.pendingSessions} lượt đang chờ · ${b.uploads.failingSessions} lượt đang lỗi / thử lại'
               ' · ${b.uploads.items.length} file',
-              style: TextStyles.body,
+              style: LuxFonts.sans(size: 18),
             ),
             if (b.uploads.lastError != null)
-              Text('Lỗi gần nhất: ${b.uploads.lastError}', style: TextStyles.body.copyWith(color: Palette.brickInk)),
-            Text('Máy chủ: $SHARE_API_URL ${BOOTH_KEY.isEmpty ? '· THIẾU BOOTH_KEY' : ''}', style: TextStyles.label),
+              Text('Lỗi gần nhất: ${b.uploads.lastError}', style: LuxFonts.sans(size: 18).copyWith(color: Lux.urgentText)),
+            Text('Máy chủ: $SHARE_API_URL ${BOOTH_KEY.isEmpty ? '· THIẾU BOOTH_KEY' : ''}', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7))),
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerLeft,
@@ -220,9 +229,9 @@ class _AdminScreenState extends State<AdminScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Ảnh mỗi lượt được lưu trong app Tệp → Trên iPad → Photobooth → Booth.',
-              style: TextStyles.label,
+              style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
             ),
           ],
         ),
@@ -232,26 +241,26 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Widget _section(String title) => Padding(
     padding: const EdgeInsets.only(top: 28, bottom: 10),
-    child: Text(title, style: TextStyles.title),
+    child: Text(title, style: LuxFonts.serif(size: 30)),
   );
 
   Widget _jobRow(PrintJob job) {
     final t = job.created;
     String two(int n) => n.toString().padLeft(2, '0');
     final (label, color) = switch (job.status) {
-      JobStatus.waiting => ('Đang chờ', Palette.kraftInk),
-      JobStatus.printing => ('Đang in', Palette.moss),
-      JobStatus.done => ('Đã in', Palette.moss),
-      JobStatus.failed => ('Lỗi${job.error == null ? '' : ': ${job.error}'}', Palette.brickInk),
+      JobStatus.waiting => ('Đang chờ', Lux.ivoryA(0.6)),
+      JobStatus.printing => ('Đang in', const Color(0xFF7BD389)),
+      JobStatus.done => ('Đã in', const Color(0xFF7BD389)),
+      JobStatus.failed => ('Lỗi${job.error == null ? '' : ': ${job.error}'}', Lux.urgentText),
     };
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.photo_outlined),
       title: Text(
         '${two(t.hour)}:${two(t.minute)}:${two(t.second)}  ·  ${p.basename(p.dirname(job.path))}',
-        style: TextStyles.body,
+        style: LuxFonts.sans(size: 18),
       ),
-      subtitle: Text(label, style: TextStyles.label.copyWith(color: color)),
+      subtitle: Text(label, style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)).copyWith(color: color)),
       trailing: job.status == JobStatus.failed || job.status == JobStatus.done
           ? OutlinedButton(onPressed: () => widget.booth.prints.retry(job), child: const Text('In lại'))
           : null,
