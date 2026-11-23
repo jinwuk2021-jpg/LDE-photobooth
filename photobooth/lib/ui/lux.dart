@@ -48,11 +48,7 @@ abstract final class Lux {
   /// Screen background behind the panels (navy glow from the top, rose / gold from the corners).
   static const backdrop = BoxDecoration(
     color: night,
-    gradient: RadialGradient(
-      center: Alignment(0, -1.1),
-      radius: 1.1,
-      colors: [Color(0x8C28305C), Color(0x000B0B12)],
-    ),
+    gradient: RadialGradient(center: Alignment(0, -1.1), radius: 1.1, colors: [Color(0x8C28305C), Color(0x000B0B12)]),
   );
 }
 
@@ -61,7 +57,14 @@ abstract final class Lux {
 abstract final class LuxFonts {
   static bool enabled = false;
 
-  static TextStyle serif({double size = 38, FontWeight weight = FontWeight.w600, bool italic = false, Color? color, double? height, double? spacing}) {
+  static TextStyle serif({
+    double size = 38,
+    FontWeight weight = FontWeight.w600,
+    bool italic = false,
+    Color? color,
+    double? height,
+    double? spacing,
+  }) {
     final s = TextStyle(
       fontSize: size,
       fontWeight: weight,
@@ -69,12 +72,26 @@ abstract final class LuxFonts {
       color: color ?? Lux.ivory,
       height: height,
       letterSpacing: spacing,
+      fontFamilyFallback: const ['Hiragino Mincho ProN', 'Hiragino Sans'],
     );
     return enabled ? GoogleFonts.playfairDisplay(textStyle: s) : s.copyWith(fontFamily: 'Georgia');
   }
 
-  static TextStyle sans({double size = 20, FontWeight weight = FontWeight.w400, Color? color, double? height, double? spacing}) {
-    final s = TextStyle(fontSize: size, fontWeight: weight, color: color ?? Lux.ivory, height: height, letterSpacing: spacing);
+  static TextStyle sans({
+    double size = 20,
+    FontWeight weight = FontWeight.w400,
+    Color? color,
+    double? height,
+    double? spacing,
+  }) {
+    final s = TextStyle(
+      fontSize: size,
+      fontWeight: weight,
+      color: color ?? Lux.ivory,
+      height: height,
+      letterSpacing: spacing,
+      fontFamilyFallback: const ['Hiragino Sans'],
+    );
     return enabled ? GoogleFonts.beVietnamPro(textStyle: s) : s;
   }
 
@@ -102,7 +119,14 @@ abstract final class LuxFonts {
 
 /// Text painted with the metal gradient. [sweep]: the light slides across every 6 s.
 class GoldText extends StatefulWidget {
-  const GoldText(this.text, {super.key, required this.style, this.sweep = true, this.align = TextAlign.center, this.ink = false});
+  const GoldText(
+    this.text, {
+    super.key,
+    required this.style,
+    this.sweep = true,
+    this.align = TextAlign.center,
+    this.ink = false,
+  });
   final String text;
   final TextStyle style;
   final bool sweep;
@@ -132,7 +156,11 @@ class _GoldTextState extends State<GoldText> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final text = Text(widget.text, textAlign: widget.align, style: widget.style.copyWith(color: Colors.white));
+    final text = Text(
+      widget.text,
+      textAlign: widget.align,
+      style: widget.style.copyWith(color: Colors.white),
+    );
     return AnimatedBuilder(
       animation: _c,
       builder: (context, child) {
@@ -159,7 +187,15 @@ class _GoldTextState extends State<GoldText> with SingleTickerProviderStateMixin
 
 /// Dark glass panel: blur 18, gold hairline, soft shadow.
 class Glass extends StatelessWidget {
-  const Glass({super.key, required this.child, this.radius = 30, this.padding = EdgeInsets.zero, this.width, this.height, this.border});
+  const Glass({
+    super.key,
+    required this.child,
+    this.radius = 30,
+    this.padding = EdgeInsets.zero,
+    this.width,
+    this.height,
+    this.border,
+  });
   final Widget child;
   final double radius;
   final EdgeInsets padding;
@@ -230,8 +266,12 @@ class GoldButton extends StatefulWidget {
 }
 
 class _GoldButtonState extends State<GoldButton> with TickerProviderStateMixin {
-  late final AnimationController _shimmer = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
-  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+  late final AnimationController _shimmer = AnimationController(vsync: this, duration: const Duration(seconds: 3))
+    ..repeat();
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
   bool _down = false;
 
   @override
@@ -261,9 +301,23 @@ class _GoldButtonState extends State<GoldButton> with TickerProviderStateMixin {
     final label = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.icon != null && !widget.iconAfter) ...[Icon(widget.icon, color: fg, size: widget.fontSize), const SizedBox(width: 14)],
-        Text(widget.label, style: LuxFonts.sans(size: widget.fontSize, weight: FontWeight.w600, color: fg, spacing: widget.fontSize * 0.01)),
-        if (widget.icon != null && widget.iconAfter) ...[const SizedBox(width: 14), Icon(widget.icon, color: fg, size: widget.fontSize)],
+        if (widget.icon != null && !widget.iconAfter) ...[
+          Icon(widget.icon, color: fg, size: widget.fontSize),
+          const SizedBox(width: 14),
+        ],
+        Text(
+          widget.label,
+          style: LuxFonts.sans(
+            size: widget.fontSize,
+            weight: FontWeight.w600,
+            color: fg,
+            spacing: widget.fontSize * 0.01,
+          ),
+        ),
+        if (widget.icon != null && widget.iconAfter) ...[
+          const SizedBox(width: 14),
+          Icon(widget.icon, color: fg, size: widget.fontSize),
+        ],
       ],
     );
     final r = BorderRadius.circular(999);
@@ -294,11 +348,19 @@ class _GoldButtonState extends State<GoldButton> with TickerProviderStateMixin {
                   borderRadius: r,
                   gradient: enabled
                       ? Lux.button
-                      : const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF4A4434), Color(0xFF3A3528)]),
+                      : const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF4A4434), Color(0xFF3A3528)],
+                        ),
                   border: Border.all(color: enabled ? const Color(0x99FFF4D6) : const Color(0x40D4AF6A)),
                   boxShadow: enabled
                       ? [
-                          BoxShadow(color: Lux.champagne.withValues(alpha: 0.28 + 0.3 * glow), blurRadius: 30 + 18 * glow, offset: const Offset(0, 10)),
+                          BoxShadow(
+                            color: Lux.champagne.withValues(alpha: 0.28 + 0.3 * glow),
+                            blurRadius: 30 + 18 * glow,
+                            offset: const Offset(0, 10),
+                          ),
                           const BoxShadow(color: Color(0x80000000), blurRadius: 6, offset: Offset(0, 2)),
                           if (_down) const BoxShadow(color: Color(0xBFF5E1A4), blurRadius: 44),
                         ]
@@ -342,7 +404,8 @@ class _ShimmerPainter extends CustomPainter {
     canvas.drawRect(
       rect,
       Paint()
-        ..shader = const LinearGradient(colors: [Color(0x00FFFFFF), Color(0xCCFFFFFF), Color(0x00FFFFFF)]).createShader(rect),
+        ..shader = const LinearGradient(colors: [Color(0x00FFFFFF), Color(0xCCFFFFFF), Color(0x00FFFFFF)])
+            .createShader(rect),
     );
     canvas.restore();
   }
@@ -353,7 +416,15 @@ class _ShimmerPainter extends CustomPainter {
 
 /// Outlined glass pill (secondary action).
 class LineButton extends StatefulWidget {
-  const LineButton({super.key, required this.label, required this.onPressed, this.icon, this.width, this.height = 84, this.fontSize = 26});
+  const LineButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.width,
+    this.height = 84,
+    this.fontSize = 26,
+  });
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
@@ -398,8 +469,14 @@ class _LineButtonState extends State<LineButton> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (widget.icon != null) ...[Icon(widget.icon, color: Lux.ivory, size: widget.fontSize), const SizedBox(width: 10)],
-                Text(widget.label, style: LuxFonts.sans(size: widget.fontSize, weight: FontWeight.w500)),
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, color: Lux.ivory, size: widget.fontSize),
+                  const SizedBox(width: 10),
+                ],
+                Text(
+                  widget.label,
+                  style: LuxFonts.sans(size: widget.fontSize, weight: FontWeight.w500),
+                ),
               ],
             ),
           ),
@@ -417,29 +494,47 @@ class DecoDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget line(bool left) => Container(
-          width: width,
-          height: 1,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: left ? const [Color(0x00D4AF6A), Lux.champagne] : const [Lux.champagne, Color(0x00D4AF6A)]),
-          ),
-        );
+      width: width,
+      height: 1,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: left ? const [Color(0x00D4AF6A), Lux.champagne] : const [Lux.champagne, Color(0x00D4AF6A)],
+        ),
+      ),
+    );
     Widget diamond(double s, bool filled) => Transform.rotate(
-          angle: 0.785,
-          child: Container(
-            width: s,
-            height: s,
-            decoration: BoxDecoration(color: filled ? Lux.champagne : null, border: filled ? null : Border.all(color: Lux.champagne)),
-          ),
-        );
+      angle: 0.785,
+      child: Container(
+        width: s,
+        height: s,
+        decoration: BoxDecoration(
+          color: filled ? Lux.champagne : null,
+          border: filled ? null : Border.all(color: Lux.champagne),
+        ),
+      ),
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [line(true), const SizedBox(width: 12), diamond(7, false), const SizedBox(width: 12), diamond(6, true), const SizedBox(width: 12), diamond(7, false), const SizedBox(width: 12), line(false)],
+      children: [
+        line(true),
+        const SizedBox(width: 12),
+        diamond(7, false),
+        const SizedBox(width: 12),
+        diamond(6, true),
+        const SizedBox(width: 12),
+        diamond(7, false),
+        const SizedBox(width: 12),
+        line(false),
+      ],
     );
   }
 }
 
 /// Fade + scale 1.02 → 1 page change (380 ms, easeOutQuint).
 Widget luxTransition(Widget child, Animation<double> anim) => FadeTransition(
-      opacity: CurvedAnimation(parent: anim, curve: Curves.easeOutQuint),
-      child: ScaleTransition(scale: Tween(begin: 1.02, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutQuint)), child: child),
-    );
+  opacity: CurvedAnimation(parent: anim, curve: Curves.easeOutQuint),
+  child: ScaleTransition(
+    scale: Tween(begin: 1.02, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutQuint)),
+    child: child,
+  ),
+);

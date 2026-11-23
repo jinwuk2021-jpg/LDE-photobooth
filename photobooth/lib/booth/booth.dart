@@ -13,6 +13,7 @@ import '../config.dart';
 import '../services/printer.dart';
 import '../services/settings.dart';
 import '../services/upload_queue.dart';
+import '../ui/strings.dart';
 import 'print_layout.dart';
 
 /// One guest, from picking a frame to pressing "In".
@@ -132,6 +133,7 @@ class Booth {
         dateLine: settings.dateLine,
         subtitle: settings.subtitle,
         qrUrl: url,
+        scanHint: T.now.printScanHint,
       ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);

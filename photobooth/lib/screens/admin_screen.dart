@@ -126,7 +126,10 @@ class _AdminScreenState extends State<AdminScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              Text('Hàng đợi in', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)).copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Hàng đợi in',
+                style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)).copyWith(fontWeight: FontWeight.w700),
+              ),
               if (b.prints.jobs.isEmpty) Text('Chưa có lệnh in nào.', style: LuxFonts.sans(size: 18)),
               for (final job in b.prints.jobs.take(20)) _jobRow(job),
             ],
@@ -142,7 +145,9 @@ class _AdminScreenState extends State<AdminScreen> {
                     color: Lux.navy,
                     child: b.startImage.existsSync()
                         ? Image.file(b.startImage, key: ValueKey(version), fit: BoxFit.contain)
-                        : Center(child: Text('Chưa có ảnh', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)))),
+                        : Center(
+                            child: Text('Chưa có ảnh', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7))),
+                          ),
                   ),
                   const SizedBox(width: 20),
                   FilledButton.icon(
@@ -217,8 +222,14 @@ class _AdminScreenState extends State<AdminScreen> {
               style: LuxFonts.sans(size: 18),
             ),
             if (b.uploads.lastError != null)
-              Text('Lỗi gần nhất: ${b.uploads.lastError}', style: LuxFonts.sans(size: 18).copyWith(color: Lux.urgentText)),
-            Text('Máy chủ: $SHARE_API_URL ${BOOTH_KEY.isEmpty ? '· THIẾU BOOTH_KEY' : ''}', style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7))),
+              Text(
+                'Lỗi gần nhất: ${b.uploads.lastError}',
+                style: LuxFonts.sans(size: 18).copyWith(color: Lux.urgentText),
+              ),
+            Text(
+              'Máy chủ: $SHARE_API_URL ${BOOTH_KEY.isEmpty ? '· THIẾU BOOTH_KEY' : ''}',
+              style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
+            ),
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerLeft,
@@ -260,7 +271,10 @@ class _AdminScreenState extends State<AdminScreen> {
         '${two(t.hour)}:${two(t.minute)}:${two(t.second)}  ·  ${p.basename(p.dirname(job.path))}',
         style: LuxFonts.sans(size: 18),
       ),
-      subtitle: Text(label, style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)).copyWith(color: color)),
+      subtitle: Text(
+        label,
+        style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)).copyWith(color: color),
+      ),
       trailing: job.status == JobStatus.failed || job.status == JobStatus.done
           ? OutlinedButton(onPressed: () => widget.booth.prints.retry(job), child: const Text('In lại'))
           : null,

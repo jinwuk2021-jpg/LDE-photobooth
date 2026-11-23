@@ -68,7 +68,7 @@ const boothPut = (e, name, body, headers = {}, now = () => 1_000) =>
     now,
   );
 const boothGet = (e, path, now = () => 2_000, headers = {}) =>
-  worker.fetch(new Request(`https://lenslycam.com/lde/b/${BID}${path}`, { headers }), e, {}, now);
+  worker.fetch(new Request(`https://lenslycam.com/lde/b/${BID}${path}`, { headers: { 'accept-language': 'vi-VN,vi;q=0.9', ...headers } }), e, {}, now);
 
 test('booth: needs its own key, not the app key', async () => {
   const e = boothEnv();
@@ -185,4 +185,23 @@ test('the page loads fonts and files from /lde/', async () => {
   assert.match(html, /url\(\/lde\/fonts\/PatrickHand-Regular\.ttf\)/);
   assert.doesNotMatch(html, /url\(\/fonts\//);
   assert.match(html, /src="\/lde\/b\/abcdefghjkmn\/print\.jpg"/);
+});
+
+test('the page speaks the phone language: ja, en, unknown → en, ?lang= wins', async () => {
+  const e = boothEnv();
+  await boothPut(e, 'print.jpg', jpgBody(1));
+  const get = async (lang, q = '') => (await worker.fetch(new Request(`https://lenslycam.com/lde/b/${BID}${q}`, { headers: { 'accept-language': lang } }), e, {}, () => 2_000)).text();
+  const ja = await get('ja-JP,ja;q=0.9');
+  assert.match(ja, /<html lang="ja">/);
+  assert.match(ja, /プリントをダウンロード/);
+  assert.match(ja, /<b>日本語<\/b>/);
+  const en = await get('en-US,en;q=0.9');
+  assert.match(en, /Download the print/);
+  assert.match(await get('fr-FR'), /Download the print/);
+  const forced = await get('ja-JP', '?lang=vi');
+  assert.match(forced, /Tải ảnh in/);
+  assert.match(forced, /<a href="\?lang=ja">日本語<\/a>/);
+  // Expired page too.
+  const gone = await (await worker.fetch(new Request(`https://lenslycam.com/lde/b/${BID}`, { headers: { 'accept-language': 'ja' } }), e, {}, () => 1_000 + 31 * DAY)).text();
+  assert.match(gone, /写真の公開期間が終了しました/);
 });

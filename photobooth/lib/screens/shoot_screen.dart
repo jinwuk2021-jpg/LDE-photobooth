@@ -7,6 +7,7 @@ import '../booth/booth.dart';
 import '../camera/photobooth_sequence.dart';
 import '../config.dart';
 import '../ui/lux.dart';
+import '../ui/strings.dart';
 import '../ui/sparkle.dart';
 import '../ui/widgets.dart';
 
@@ -15,7 +16,13 @@ import '../ui/widgets.dart';
 /// (5 s first, 3 s after), a white flash and a gold spark burst per shot.
 /// Lensly's Live recorder runs for the whole sequence.
 class ShootScreen extends StatefulWidget {
-  const ShootScreen({super.key, required this.booth, required this.guest, required this.onDone, required this.onFailed});
+  const ShootScreen({
+    super.key,
+    required this.booth,
+    required this.guest,
+    required this.onDone,
+    required this.onFailed,
+  });
   final Booth booth;
   final GuestSession guest;
   final VoidCallback onDone;
@@ -37,7 +44,8 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
 
   /// "Chuẩn bị" bar (3 s) and the nudging arrow.
   late final AnimationController _ready = AnimationController(vsync: this, duration: READY_DELAY)..forward();
-  late final AnimationController _nudge = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+  late final AnimationController _nudge = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+    ..repeat(reverse: true);
 
   @override
   void initState() {
@@ -53,9 +61,10 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
       onError: (_) => _finish(ok: false),
     );
     // Live starts now (the encoder warms up), the countdown after READY_DELAY.
-    Future.wait([widget.booth.camera.live.start().catchError((_) {}), Future<void>.delayed(READY_DELAY)]).whenComplete(() {
-      if (mounted) _sequence.start();
-    });
+    Future.wait([widget.booth.camera.live.start().catchError((_) {}), Future<void>.delayed(READY_DELAY)])
+        .whenComplete(() {
+          if (mounted) _sequence.start();
+        });
   }
 
   @override
@@ -75,7 +84,9 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
     await Future<void>.delayed(const Duration(milliseconds: 120));
     try {
       final b = widget.booth;
-      widget.guest.shots.add(await b.camera.capture(index, cellAspect: widget.guest.layout.cellAspect, skin: b.settings.skin));
+      widget.guest.shots.add(
+        await b.camera.capture(index, cellAspect: widget.guest.layout.cellAspect, skin: b.settings.skin),
+      );
     } finally {
       if (mounted) _burst.forward(from: 0);
     }
@@ -104,7 +115,12 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
         ),
         const DecoratedBox(
           decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x730B0B12), Color(0x000B0B12)], stops: [0, 0.22]),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x730B0B12), Color(0x000B0B12)],
+              stops: [0, 0.22],
+            ),
           ),
         ),
         const SparkleBackground(level: SparkleLevel.low, seed: 33),
@@ -121,18 +137,28 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
               builder: (context, s, child) => Transform.scale(scale: s, child: child),
               child: Column(
                 children: [
-                  GoldText('Chuẩn bị nhé!', style: LuxFonts.serif(size: 112, weight: FontWeight.w700, height: 1.1)),
+                  GoldText(T.now.getReady, style: LuxFonts.serif(size: 112, weight: FontWeight.w700, height: 1.1)),
                   const SizedBox(height: 22),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AnimatedBuilder(
                         animation: _nudge,
-                        builder: (context, child) => Transform.translate(offset: Offset(0, -8 * Curves.easeInOut.transform(_nudge.value)), child: child),
+                        builder: (context, child) => Transform.translate(
+                          offset: Offset(0, -8 * Curves.easeInOut.transform(_nudge.value)),
+                          child: child,
+                        ),
                         child: const Icon(Icons.arrow_upward_rounded, color: Lux.champagneLight, size: 40),
                       ),
                       const SizedBox(width: 14),
-                      Text('Nhìn vào camera', style: LuxFonts.sans(size: 38, weight: FontWeight.w500, color: Lux.ivory).copyWith(shadows: const [Shadow(color: Color(0x99000000), blurRadius: 16)])),
+                      Text(
+                        T.now.lookAtCamera,
+                        style: LuxFonts.sans(
+                          size: 38,
+                          weight: FontWeight.w500,
+                          color: Lux.ivory,
+                        ).copyWith(shadows: const [Shadow(color: Color(0x99000000), blurRadius: 16)]),
+                      ),
                     ],
                   ),
                 ],
@@ -153,22 +179,39 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
                   animation: _ready,
                   builder: (context, _) => FractionallySizedBox(
                     widthFactor: _ready.value,
-                    child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), gradient: const LinearGradient(colors: Lux.metal, stops: Lux.metalStops))),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(2),
+                        gradient: const LinearGradient(colors: Lux.metal, stops: Lux.metalStops),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ],
-        Positioned(top: 26, left: 0, right: 0, child: Center(child: _StatusPill(state: _state, ready: getReady))),
+        Positioned(
+          top: 26,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: _StatusPill(state: _state, ready: getReady),
+          ),
+        ),
         if (counting) Positioned(left: 36, top: 36, child: _CountdownCard(value: _state.remaining)),
-        AnimatedBuilder(animation: _burst, builder: (context, _) => SparkBurst(progress: _burst.value)),
+        AnimatedBuilder(
+          animation: _burst,
+          builder: (context, _) => SparkBurst(progress: _burst.value),
+        ),
         AnimatedBuilder(
           animation: _flash,
           builder: (context, _) {
             final ms = _flash.value * 420;
             final a = ms < 40 ? ms / 40 : (ms < 160 ? 1.0 : 1 - const Cubic(.2, .8, .2, 1).transform((ms - 160) / 260));
-            return IgnorePointer(child: ColoredBox(color: Lux.flash.withValues(alpha: _flash.isAnimating ? a.clamp(0, 1) : 0)));
+            return IgnorePointer(
+              child: ColoredBox(color: Lux.flash.withValues(alpha: _flash.isAnimating ? a.clamp(0, 1) : 0)),
+            );
           },
         ),
       ],
@@ -193,12 +236,18 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (var i = 0; i < state.total; i++) ...[_Dot(done: i < state.taken, current: i == state.shotIndex && i >= state.taken), if (i < state.total - 1) const SizedBox(width: 12)],
+          for (var i = 0; i < state.total; i++) ...[
+            _Dot(done: i < state.taken, current: i == state.shotIndex && i >= state.taken),
+            if (i < state.total - 1) const SizedBox(width: 12),
+          ],
           const SizedBox(width: 20),
           Container(width: 1, height: 26, color: const Color(0x73D4AF6A)),
           const SizedBox(width: 20),
-          if (ready) ...[Text('Sắp chụp ', style: dim), GoldText('${state.total} tấm', style: gold, sweep: false)] else ...[
-            Text('Tấm ', style: dim),
+          if (ready) ...[
+            Text(T.now.aboutToTake, style: dim),
+            GoldText(T.now.photos(state.total), style: gold, sweep: false),
+          ] else ...[
+            if (T.now.shot.isNotEmpty) Text(T.now.shot, style: dim),
             GoldText('${state.shotIndex + 1}', style: gold, sweep: false),
             Text(' / ${state.total}', style: dim),
           ],
@@ -218,7 +267,8 @@ class _Dot extends StatefulWidget {
 }
 
 class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+    ..repeat();
 
   @override
   void dispose() {
@@ -235,7 +285,10 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: widget.done ? Lux.button : null,
-        border: Border.all(color: widget.done || widget.current ? Lux.champagneLight : Lux.ivoryA(0.45), width: widget.current ? 2 : 1.5),
+        border: Border.all(
+          color: widget.done || widget.current ? Lux.champagneLight : Lux.ivoryA(0.45),
+          width: widget.current ? 2 : 1.5,
+        ),
         boxShadow: widget.done ? const [BoxShadow(color: Color(0xBFF5E1A4), blurRadius: 10)] : null,
       ),
     );
@@ -260,7 +313,10 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
           Container(
             width: 14 + 16 * _pulse.value,
             height: 14 + 16 * _pulse.value,
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Lux.champagneLight.withValues(alpha: 0.6 * (1 - _pulse.value)))),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Lux.champagneLight.withValues(alpha: 0.6 * (1 - _pulse.value))),
+            ),
           ),
           child!,
         ],
@@ -290,9 +346,29 @@ class _CountdownCard extends StatelessWidget {
             radius: 30,
             child: Stack(
               children: [
-                Positioned(left: 0, right: 0, top: 0, height: 272 * 0.46, child: Container(color: const Color(0x09FFF6DA))),
-                Positioned(left: 14, right: 14, top: 272 * 0.46, child: Container(height: 1, color: const Color(0x8C000000))),
-                Positioned(left: 0, right: 0, bottom: 22, child: Text('GIÂY', textAlign: TextAlign.center, style: LuxFonts.eyebrow(color: Lux.ivoryA(0.7)))),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: 272 * 0.46,
+                  child: Container(color: const Color(0x09FFF6DA)),
+                ),
+                Positioned(
+                  left: 14,
+                  right: 14,
+                  top: 272 * 0.46,
+                  child: Container(height: 1, color: const Color(0x8C000000)),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 22,
+                  child: Text(
+                    T.now.seconds,
+                    textAlign: TextAlign.center,
+                    style: LuxFonts.eyebrow(color: Lux.ivoryA(0.7)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -314,7 +390,9 @@ class _CountdownCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Lux.champagneLight.withValues(alpha: 0.95 * (1 - p)), width: 3),
-                      boxShadow: [BoxShadow(color: Lux.champagneLight.withValues(alpha: 0.6 * (1 - p)), blurRadius: 30)],
+                      boxShadow: [
+                        BoxShadow(color: Lux.champagneLight.withValues(alpha: 0.6 * (1 - p)), blurRadius: 30),
+                      ],
                     ),
                   ),
                 ),
@@ -339,7 +417,11 @@ class _CountdownCard extends StatelessWidget {
                     ..rotateX((1 - p) * math.pi / 2),
                   child: child,
                 ),
-                child: GoldText('$value', style: LuxFonts.serif(size: 180, weight: FontWeight.w700, height: 1), sweep: false),
+                child: GoldText(
+                  '$value',
+                  style: LuxFonts.serif(size: 180, weight: FontWeight.w700, height: 1),
+                  sweep: false,
+                ),
               ),
             ),
           ),

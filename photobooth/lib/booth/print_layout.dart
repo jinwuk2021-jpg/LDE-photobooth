@@ -63,41 +63,41 @@ class PrintGeometry {
   final Rect? band;
 
   factory PrintGeometry.of(BoothLayout layout) => switch (layout) {
-        BoothLayout.cut2 => const PrintGeometry._(
-            cells: [Rect.fromLTWH(72, 72, 1056, 704), Rect.fromLTWH(72, 800, 1056, 704)],
-            qr: Rect.fromLTWH(948, 1544, 180, 180),
-            title: Rect.fromLTWH(72, 1532, 830, 200),
-          ),
-        BoothLayout.cut3 => const PrintGeometry._(
-            cells: [Rect.fromLTWH(300, 87, 828, 518), Rect.fromLTWH(300, 629, 828, 518), Rect.fromLTWH(300, 1171, 828, 518)],
-            qr: Rect.fromLTWH(40, 1544, 180, 180),
-            // A 1380 × 220 box centred at (130, 790), turned.
-            title: Rect.fromLTWH(130 - 690, 790 - 110, 1380, 220),
-            band: Rect.fromLTWH(0, 0, 260, 1776),
-          ),
-        BoothLayout.cut4 => const PrintGeometry._(
-            cells: [
-              Rect.fromLTWH(116, 56, 760, 428),
-              Rect.fromLTWH(900, 56, 760, 428),
-              Rect.fromLTWH(116, 508, 760, 428),
-              Rect.fromLTWH(900, 508, 760, 428),
-            ],
-            qr: Rect.fromLTWH(1480, 968, 180, 180),
-            title: Rect.fromLTWH(116, 962, 1300, 200),
-          ),
-        BoothLayout.cut6 => const PrintGeometry._(
-            cells: [
-              Rect.fromLTWH(72, 72, 516, 459),
-              Rect.fromLTWH(612, 72, 516, 459),
-              Rect.fromLTWH(72, 555, 516, 459),
-              Rect.fromLTWH(612, 555, 516, 459),
-              Rect.fromLTWH(72, 1038, 516, 459),
-              Rect.fromLTWH(612, 1038, 516, 459),
-            ],
-            qr: Rect.fromLTWH(948, 1544, 180, 180),
-            title: Rect.fromLTWH(72, 1532, 830, 200),
-          ),
-      };
+    BoothLayout.cut2 => const PrintGeometry._(
+      cells: [Rect.fromLTWH(72, 72, 1056, 704), Rect.fromLTWH(72, 800, 1056, 704)],
+      qr: Rect.fromLTWH(948, 1544, 180, 180),
+      title: Rect.fromLTWH(72, 1532, 830, 200),
+    ),
+    BoothLayout.cut3 => const PrintGeometry._(
+      cells: [Rect.fromLTWH(300, 87, 828, 518), Rect.fromLTWH(300, 629, 828, 518), Rect.fromLTWH(300, 1171, 828, 518)],
+      qr: Rect.fromLTWH(40, 1544, 180, 180),
+      // A 1380 × 220 box centred at (130, 790), turned.
+      title: Rect.fromLTWH(130 - 690, 790 - 110, 1380, 220),
+      band: Rect.fromLTWH(0, 0, 260, 1776),
+    ),
+    BoothLayout.cut4 => const PrintGeometry._(
+      cells: [
+        Rect.fromLTWH(116, 56, 760, 428),
+        Rect.fromLTWH(900, 56, 760, 428),
+        Rect.fromLTWH(116, 508, 760, 428),
+        Rect.fromLTWH(900, 508, 760, 428),
+      ],
+      qr: Rect.fromLTWH(1480, 968, 180, 180),
+      title: Rect.fromLTWH(116, 962, 1300, 200),
+    ),
+    BoothLayout.cut6 => const PrintGeometry._(
+      cells: [
+        Rect.fromLTWH(72, 72, 516, 459),
+        Rect.fromLTWH(612, 72, 516, 459),
+        Rect.fromLTWH(72, 555, 516, 459),
+        Rect.fromLTWH(612, 555, 516, 459),
+        Rect.fromLTWH(72, 1038, 516, 459),
+        Rect.fromLTWH(612, 1038, 516, 459),
+      ],
+      qr: Rect.fromLTWH(948, 1544, 180, 180),
+      title: Rect.fromLTWH(72, 1532, 830, 200),
+    ),
+  };
 }
 
 /// Everything on one card. [photos] in print order ([BoothLayout.picks] of them); null draws an
@@ -111,6 +111,7 @@ class PrintSpec {
     this.subtitle = 'Tiệc tổng kết cuối năm',
     this.qrUrl,
     this.qrSlot = false,
+    this.scanHint = 'Quét mã để tải ảnh & video Live →',
   });
 
   final BoothLayout layout;
@@ -125,6 +126,9 @@ class PrintSpec {
   /// (or shows a "QR" mark when [qrSlot]).
   final String? qrUrl;
   final bool qrSlot;
+
+  /// Under the date, in the guest's language.
+  final String scanHint;
 }
 
 /// Paints a card at any size (scaled from [BoothLayout.size]).
@@ -150,6 +154,7 @@ class PrintPainter extends CustomPainter {
       old.spec.subtitle != spec.subtitle ||
       old.spec.qrUrl != spec.qrUrl ||
       old.spec.qrSlot != spec.qrSlot ||
+      old.spec.scanHint != spec.scanHint ||
       !_sameList(old.spec.photos, spec.photos);
 
   static bool _sameList(List<Object?> a, List<Object?> b) {
@@ -196,7 +201,12 @@ void paintPrint(Canvas canvas, PrintSpec spec) {
     card,
     Paint()
       ..shader = layout.dark
-          ? const RadialGradient(center: Alignment(0, -1), radius: 1.2, colors: [Color(0xFF1A1F3A), Lux.night], stops: [0, 0.62]).createShader(card)
+          ? const RadialGradient(
+              center: Alignment(0, -1),
+              radius: 1.2,
+              colors: [Color(0xFF1A1F3A), Lux.night],
+              stops: [0, 0.62],
+            ).createShader(card)
           : const LinearGradient(
               begin: Alignment(-0.34, -1),
               end: Alignment(0.34, 1),
@@ -207,10 +217,18 @@ void paintPrint(Canvas canvas, PrintSpec spec) {
   if (band != null) {
     canvas.drawRect(
       band,
-      Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Lux.navy, Lux.night]).createShader(band),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Lux.navy, Lux.night],
+        ).createShader(band),
     );
     final edge = Rect.fromLTWH(band.right, 0, 3, size.height);
-    canvas.drawRect(edge, Paint()..shader = const LinearGradient(colors: Lux.metal, stops: Lux.metalStops).createShader(edge));
+    canvas.drawRect(
+      edge,
+      Paint()..shader = const LinearGradient(colors: Lux.metal, stops: Lux.metalStops).createShader(edge),
+    );
   }
 
   // Thin frame 22 px in (decoration only, may be trimmed) and the four art-deco corners.
@@ -236,7 +254,13 @@ void paintPrint(Canvas canvas, PrintSpec spec) {
     canvas.drawRect(cell, Paint()..color = const Color(0xFF17141C));
     final img = spec.photos.length > i ? spec.photos[i] : null;
     if (img == null) {
-      _text(canvas, '${i + 1}', cell, LuxFonts.serif(size: 120, weight: FontWeight.w700, color: frame.withValues(alpha: 0.5)), center: true);
+      _text(
+        canvas,
+        '${i + 1}',
+        cell,
+        LuxFonts.serif(size: 120, weight: FontWeight.w700, color: frame.withValues(alpha: 0.5)),
+        center: true,
+      );
     } else {
       _cover(canvas, img, cell);
     }
@@ -271,18 +295,35 @@ void _titleBlock(Canvas canvas, PrintSpec spec, Rect box, Color ink, {required b
   final w = box.width;
 
   TextSpan title(Paint? gold) => TextSpan(
-        style: LuxFonts.serif(size: big, weight: FontWeight.w700, height: 1.05, spacing: big * 0.01).copyWith(foreground: gold),
-        children: [
-          TextSpan(text: head),
-          TextSpan(text: tail, style: LuxFonts.serif(size: big, weight: FontWeight.w400, italic: true, height: 1.05).copyWith(foreground: gold)),
-        ],
-      );
+    style: LuxFonts.serif(
+      size: big,
+      weight: FontWeight.w700,
+      height: 1.05,
+      spacing: big * 0.01,
+    ).copyWith(foreground: gold),
+    children: [
+      TextSpan(text: head),
+      TextSpan(
+        text: tail,
+        style: LuxFonts.serif(
+          size: big,
+          weight: FontWeight.w400,
+          italic: true,
+          height: 1.05,
+        ).copyWith(foreground: gold),
+      ),
+    ],
+  );
   // Measure first, then paint with the gold spread over exactly the text.
-  final measure = TextPainter(textDirection: TextDirection.ltr, maxLines: 1, ellipsis: '…', text: title(null))..layout(maxWidth: w);
+  final measure = TextPainter(textDirection: TextDirection.ltr, maxLines: 1, ellipsis: '…', text: title(null))
+    ..layout(maxWidth: w);
   final gold = Paint()
-    ..shader = LinearGradient(colors: onDark ? Lux.metal : Lux.ink, stops: onDark ? Lux.metalStops : null)
-        .createShader(Rect.fromLTWH(0, 0, measure.width, measure.height));
-  final goldTitle = TextPainter(textDirection: TextDirection.ltr, maxLines: 1, ellipsis: '…', text: title(gold))..layout(maxWidth: w);
+    ..shader = LinearGradient(
+      colors: onDark ? Lux.metal : Lux.ink,
+      stops: onDark ? Lux.metalStops : null,
+    ).createShader(Rect.fromLTWH(0, 0, measure.width, measure.height));
+  final goldTitle = TextPainter(textDirection: TextDirection.ltr, maxLines: 1, ellipsis: '…', text: title(gold))
+    ..layout(maxWidth: w);
   measure.dispose();
 
   final subSize = rotated ? 26.0 : 24.0;
@@ -292,7 +333,11 @@ void _titleBlock(Canvas canvas, PrintSpec spec, Rect box, Color ink, {required b
     ellipsis: '…',
     text: TextSpan(
       text: line2,
-      style: LuxFonts.sans(size: subSize, color: rotated ? Lux.ivoryA(0.9) : ink, spacing: subSize * (rotated ? 0.14 : 0.1)),
+      style: LuxFonts.sans(
+        size: subSize,
+        color: rotated ? Lux.ivoryA(0.9) : ink,
+        spacing: subSize * (rotated ? 0.14 : 0.1),
+      ),
     ),
   )..layout(maxWidth: w);
 
@@ -309,7 +354,10 @@ void _titleBlock(Canvas canvas, PrintSpec spec, Rect box, Color ink, {required b
     final hint = TextPainter(
       textDirection: TextDirection.ltr,
       maxLines: 1,
-      text: TextSpan(text: 'Quét mã để tải ảnh & video Live →', style: LuxFonts.sans(size: 22, color: ink.withValues(alpha: 0.72))),
+      text: TextSpan(
+        text: spec.scanHint,
+        style: LuxFonts.sans(size: 22, color: ink.withValues(alpha: 0.72)),
+      ),
     )..layout(maxWidth: w);
     hint.paint(canvas, Offset(0, y2 + sub.height + 10));
     hint.dispose();

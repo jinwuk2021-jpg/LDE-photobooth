@@ -20,6 +20,7 @@ import 'services/printer.dart';
 import 'services/settings.dart';
 import 'services/upload_queue.dart';
 import 'ui/lux.dart';
+import 'ui/strings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +55,11 @@ class BoothApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(seedColor: Lux.champagne, brightness: Brightness.dark, surface: const Color(0xFF14121E)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Lux.champagne,
+          brightness: Brightness.dark,
+          surface: const Color(0xFF14121E),
+        ),
         scaffoldBackgroundColor: Lux.night,
       ),
       home: Home(booth: booth),
@@ -117,6 +122,8 @@ class _HomeState extends State<Home> {
     if (g != null && _stage != Stage.thanks) booth.discard(g);
     _guest = null;
     _finished = null;
+    // The next guest starts in Vietnamese again.
+    lang.value = Lang.vi;
     _go(Stage.idle);
   }
 

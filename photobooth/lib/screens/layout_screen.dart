@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../booth/print_layout.dart';
 import '../services/settings.dart';
 import '../ui/lux.dart';
+import '../ui/strings.dart';
 import '../ui/sparkle.dart';
 
 /// 2 · "Chọn khung ảnh": a glass card per frame with its print drawn small; tap one (it lifts,
@@ -34,9 +35,9 @@ class _LayoutScreenState extends State<LayoutScreen> {
             top: 50,
             child: Column(
               children: [
-                Text('BƯỚC 1 / 3', style: LuxFonts.eyebrow()),
+                Text(T.now.step1, style: LuxFonts.eyebrow()),
                 const SizedBox(height: 10),
-                GoldText('Chọn khung ảnh', style: LuxFonts.serif(size: 64, weight: FontWeight.w600, height: 1.15)),
+                GoldText(T.now.chooseFrame, style: LuxFonts.serif(size: 64, weight: FontWeight.w600, height: 1.15)),
                 const SizedBox(height: 10),
                 const DecoDivider(),
               ],
@@ -70,9 +71,9 @@ class _LayoutScreenState extends State<LayoutScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                LineButton(label: 'Quay lại', icon: Icons.arrow_back, onPressed: widget.onBack, width: 220),
+                LineButton(label: T.now.back, icon: Icons.arrow_back, onPressed: widget.onBack, width: 220),
                 GoldButton(
-                  label: picked == null ? 'Chạm một khung' : 'Bắt đầu chụp',
+                  label: picked == null ? T.now.tapAFrame : T.now.startShooting,
                   icon: picked == null ? null : Icons.arrow_forward,
                   iconAfter: true,
                   width: 380,
@@ -88,7 +89,13 @@ class _LayoutScreenState extends State<LayoutScreen> {
 }
 
 class _FrameCard extends StatelessWidget {
-  const _FrameCard({required this.layout, required this.settings, required this.on, required this.dim, required this.onTap});
+  const _FrameCard({
+    required this.layout,
+    required this.settings,
+    required this.on,
+    required this.dim,
+    required this.onTap,
+  });
   final BoothLayout layout;
   final BoothSettings settings;
   final bool on;
@@ -120,7 +127,12 @@ class _FrameCard extends StatelessWidget {
                   duration: const Duration(milliseconds: 240),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
-                    boxShadow: on ? const [BoxShadow(color: Color(0x61F5E1A4), blurRadius: 42), BoxShadow(color: Color(0x8C000000), blurRadius: 60, offset: Offset(0, 30))] : null,
+                    boxShadow: on
+                        ? const [
+                            BoxShadow(color: Color(0x61F5E1A4), blurRadius: 42),
+                            BoxShadow(color: Color(0x8C000000), blurRadius: 60, offset: Offset(0, 30)),
+                          ]
+                        : null,
                   ),
                   child: Glass(
                     radius: 28,
@@ -137,28 +149,41 @@ class _FrameCard extends StatelessWidget {
                               height: preview.height,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                boxShadow: const [BoxShadow(color: Color(0x8C000000), blurRadius: 40, offset: Offset(0, 18))],
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0x8C000000), blurRadius: 40, offset: Offset(0, 18)),
+                                ],
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
                                 child: CustomPaint(
-                                  painter: PrintPainter(PrintSpec(
-                                    layout: layout,
-                                    photos: const [],
-                                    title: settings.title,
-                                    dateLine: settings.dateLine,
-                                    subtitle: settings.subtitle,
-                                    qrSlot: true,
-                                  )),
+                                  painter: PrintPainter(
+                                    PrintSpec(
+                                      layout: layout,
+                                      photos: const [],
+                                      title: settings.title,
+                                      dateLine: settings.dateLine,
+                                      subtitle: settings.subtitle,
+                                      qrSlot: true,
+                                      scanHint: T.now.printScanHint,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 14),
-                        Text(layout.label, style: LuxFonts.serif(size: 36, weight: FontWeight.w600, height: 1, color: on ? Lux.champagneLight : Lux.ivory)),
+                        Text(
+                          layout.label,
+                          style: LuxFonts.serif(
+                            size: 36,
+                            weight: FontWeight.w600,
+                            height: 1,
+                            color: on ? Lux.champagneLight : Lux.ivory,
+                          ),
+                        ),
                         const SizedBox(height: 10),
-                        Text(layout.hint, style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.68))),
+                        Text(_hint(layout), style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.68))),
                       ],
                     ),
                   ),
@@ -191,4 +216,14 @@ class _FrameCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _hint(BoothLayout layout) {
+  final t = T.now;
+  return t.frameHint(layout.picks, switch (layout) {
+    BoothLayout.cut2 => t.portrait,
+    BoothLayout.cut3 => t.titleBand,
+    BoothLayout.cut4 => t.landscape,
+    BoothLayout.cut6 => t.twoColumns,
+  });
 }

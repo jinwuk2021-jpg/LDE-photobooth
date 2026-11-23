@@ -205,10 +205,10 @@ export const SAVE_FILE =
   `catch(e){if(!e||e.name!=='NotAllowedError')return 'cancelled'}}` +
   `download(file);return 'downloaded'};`;
 
-function composeScript(id, rects) {
+function composeScript(id, rects, lang = 'vi') {
   return `<script>(()=>{` +
     `const R=${JSON.stringify(rects)},ID=${JSON.stringify(id)};` + SAVE_FILE +
-    `const S=${scriptJson(COMPOSE_STRINGS)};` + SCRIPT_FILL +
+    `const S=${scriptJson(Object.fromEntries(['composing', 'composedSaved', 'composeAgain', 'composeFailed'].map((k) => [k, W[lang][k]])))};` + SCRIPT_FILL +
     `const btn=document.getElementById('compose'),label=btn.querySelector('span'),more=document.querySelector('details.cells');` +
     // H.264 mp4 first (iPhone Photos, Android gallery), then any mp4 (has a
     // proper duration), webm last (MediaRecorder webm has no duration).
@@ -267,12 +267,106 @@ export function isExpired(uploadedMs, nowMs, ttlDays) {
   return !Number.isFinite(uploadedMs) || nowMs >= expiresAt(uploadedMs, ttlDays);
 }
 
-const COMPOSE_STRINGS = {
-  composing: 'Đang ghép video… {s}s',
-  composedSaved: 'Đã tải · Lưu vào Ảnh',
-  composeAgain: 'Tải lại video',
-  composeFailed: 'Chưa ghép được, thử tải từng ô',
+// ---------------------------------------------------------------- languages
+// The guest page speaks the phone's language: ?lang=vi|en|ja, else the first of vi / ja / en in
+// Accept-Language, else English.
+export const LANGS = ['vi', 'en', 'ja'];
+const LANG_NAMES = { vi: 'Tiếng Việt', en: 'English', ja: '日本語' };
+
+export const W = {
+  vi: {
+    composing: 'Đang ghép video… {s}s',
+    composedSaved: 'Đã tải · Lưu vào Ảnh',
+    composeAgain: 'Tải lại video',
+    composeFailed: 'Chưa ghép được, thử tải từng ô',
+    gone: 'Ảnh đã hết hạn',
+    goneText: 'Ảnh và clip chỉ được giữ {n} ngày.',
+    uploading: 'Ảnh đang được tải lên…<br>Trang sẽ tự cập nhật.',
+    videoLoading: 'Đang tải video…',
+    videosComing: 'Video Live đang được tải lên, vui lòng đợi ít phút. Trang sẽ tự cập nhật.',
+    downloadComposed: 'Tải video ghép',
+    videosUploading: 'Video đang tải lên…',
+    downloadPrint: 'Tải ảnh in',
+    printAlt: 'Ảnh in',
+    photo: 'Ảnh',
+    clip: 'Clip',
+    loading: 'đang tải…',
+    none: 'không có',
+    clipLoading: 'clip đang tải…',
+    saveBefore: 'Lưu về máy trước ngày {date}',
+    help: '"Tải video ghép": cả tấm ảnh với các clip chạy cùng lúc, thành một video. Chạm "Ảnh" hoặc "Clip" để tải từng cái. Trên iPhone: mở bằng Safari.',
+  },
+  en: {
+    composing: 'Making your video… {s}s',
+    composedSaved: 'Downloaded · save to Photos',
+    composeAgain: 'Download again',
+    composeFailed: 'Could not make it, download each clip instead',
+    gone: 'These photos have expired',
+    goneText: 'Photos and clips are kept for {n} days.',
+    uploading: 'Your photos are uploading…<br>This page updates by itself.',
+    videoLoading: 'Video coming…',
+    videosComing: 'Live videos are uploading, please wait a few minutes. This page updates by itself.',
+    downloadComposed: 'Download the video',
+    videosUploading: 'Videos uploading…',
+    downloadPrint: 'Download the print',
+    printAlt: 'The print',
+    photo: 'Photo',
+    clip: 'Clip',
+    loading: 'loading…',
+    none: 'none',
+    clipLoading: 'clip coming…',
+    saveBefore: 'Save them before {date}',
+    help: '"Download the video": the whole print with every clip playing, as one video. Tap "Photo" or "Clip" to download one by one. On iPhone, open this page in Safari.',
+  },
+  ja: {
+    composing: '動画を作成中… {s}秒',
+    composedSaved: 'ダウンロード完了 · 写真に保存',
+    composeAgain: 'もう一度ダウンロード',
+    composeFailed: '作成できませんでした。1つずつ保存してね',
+    gone: '写真の公開期間が終了しました',
+    goneText: '写真と動画の保存期間は{n}日間です。',
+    uploading: '写真をアップロード中…<br>このページは自動で更新されます。',
+    videoLoading: '動画を読み込み中…',
+    videosComing: 'Live動画をアップロード中です。数分お待ちください。ページは自動で更新されます。',
+    downloadComposed: '動画をダウンロード',
+    videosUploading: '動画をアップロード中…',
+    downloadPrint: 'プリントをダウンロード',
+    printAlt: 'プリント',
+    photo: '写真',
+    clip: '動画',
+    loading: '読み込み中…',
+    none: 'なし',
+    clipLoading: '動画を読み込み中…',
+    saveBefore: '{date}までに保存してね',
+    help: '「動画をダウンロード」：プリント全体と各動画をまとめた1本の動画。「写真」「動画」で1つずつ保存できます。iPhoneはSafariで開いてね。',
+  },
 };
+
+/// The guest's language for [request].
+export function pickLang(request) {
+  const q = new URL(request.url).searchParams.get('lang');
+  if (LANGS.includes(q)) return q;
+  for (const part of (request.headers.get('accept-language') ?? '').toLowerCase().split(',')) {
+    const code = part.trim().slice(0, 2);
+    if (LANGS.includes(code)) return code;
+  }
+  return 'en';
+}
+
+const w = (lang, key, vars = {}) => Object.keys(vars).reduce((a, k) => a.split(`{${k}}`).join(String(vars[k])), W[lang][key]);
+
+/// The expiry date in Vietnam time (UTC+7), written the way [lang] does.
+function dateFor(lang, ms) {
+  const d = new Date(ms + 7 * 60 * 60 * 1000);
+  const dd = String(d.getUTCDate()).padStart(2, '0'), mm = String(d.getUTCMonth() + 1).padStart(2, '0'), y = d.getUTCFullYear();
+  if (lang === 'ja') return `${y}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`;
+  if (lang === 'en') return `${d.getUTCDate()} ${'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[d.getUTCMonth()]} ${y}`;
+  return `${dd}/${mm}/${y}`;
+}
+
+/// Tiếng Việt · English · 日本語 at the foot of the page.
+const langLinks = (lang) =>
+  `<p class="langs">${LANGS.map((l) => (l === lang ? `<b>${LANG_NAMES[l]}</b>` : `<a href="?lang=${l}">${LANG_NAMES[l]}</a>`)).join(' · ')}</p>`;
 
 // ---------------------------------------------------------------- booth
 // The iPad makes the id itself and prints its QR before any upload, then PUTs
@@ -347,18 +441,14 @@ async function boothFiles(env, id) {
   return files;
 }
 
-/// dd/mm/yyyy in Vietnam time (UTC+7).
-const vnDate = (ms) => {
-  const d = new Date(ms + 7 * 60 * 60 * 1000);
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
-};
 
-const boothGone = (env) => {
+const boothGone = (env, lang) => {
   const r = page(
-    'vi',
-    'Ảnh đã hết hạn',
-    `<div class="gone"><div class="brand">Photobooth</div><h1>Ảnh đã hết hạn</h1>` +
-      `<p>Ảnh và clip chỉ được giữ ${boothTtl(env)} ngày.</p></div>`,
+    lang,
+    w(lang, 'gone'),
+    `<div class="gone"><div class="brand">Photobooth</div><h1>${w(lang, 'gone')}</h1>` +
+      `<p>${w(lang, 'goneText', { n: boothTtl(env) })}</p></div>` +
+      langLinks(lang),
   );
   return new Response(r.body, { status: 404, headers: r.headers });
 };
@@ -373,6 +463,9 @@ const BOOTH_STYLE = `<style>
 .bgrid .links a{color:var(--brick);font-size:13px}
 .pwait{padding:60px 20px;background:var(--paper);box-shadow:0 14px 26px var(--shadow)}
 details.bm{display:none}
+.langs{margin-top:18px;font-size:13px}.langs a{color:var(--brick)}
+:lang(ja) body{font-family:"Space Mono",ui-monospace,"Hiragino Sans","Noto Sans JP",sans-serif}
+:lang(ja) h1,:lang(ja) a.btn{font-family:"Patrick Hand","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif}
 .print .vwait{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
 background:rgba(30,26,22,.45);color:#F6F0E2;font-size:13px;letter-spacing:.04em}
 .spin{width:28px;height:28px;border:3px solid rgba(246,240,226,.35);border-top-color:#F6F0E2;border-radius:50%;animation:sp 1s linear infinite}
@@ -384,13 +477,13 @@ a.btn.off{opacity:.55;pointer-events:none}
 .bgrid .muted{color:var(--muted);font-size:12px}
 </style>`;
 
-async function boothView(env, id, now, ctx) {
+async function boothView(env, id, now, ctx, lang = 'vi') {
   const files = await boothFiles(env, id);
   const times = Object.values(files).map((f) => f.uploaded).filter(Number.isFinite);
   const first = times.length ? Math.min(...times) : NaN;
   if (times.length && isExpired(first, now(), boothTtl(env))) {
     ctx?.waitUntil?.(env.BOOTH.delete(Object.keys(files).map((n) => boothKey(id, n))));
-    return boothGone(env);
+    return boothGone(env, lang);
   }
   const has = (n) => n in files;
   let layout = null;
@@ -404,6 +497,7 @@ async function boothView(env, id, now, ctx) {
   const title = files['print.jpg']?.title || 'Photobooth';
   const src = (n) => `${BASE}/b/${id}/${n}`;
   const dl = (n, label) => `<a href="${src(n)}?dl=1" download>${label}</a>`;
+  const t = (key, vars) => w(lang, key, vars);
   const nums = Array.from({ length: count }, (_, i) => i + 1);
   // Clips come last (exported on the iPad after the photos): say so instead of a still that looks final.
   const clipsComing = waiting && nums.some((i) => !has(`${i}.mp4`));
@@ -411,7 +505,7 @@ async function boothView(env, id, now, ctx) {
 
   let print;
   if (!has('print.jpg')) {
-    print = `<div class="pwait">Ảnh đang được tải lên…<br>Trang sẽ tự cập nhật.</div>`;
+    print = `<div class="pwait">${t('uploading')}</div>`;
   } else {
     // Like Lensly's /v/ strips: each Live clip plays in its photo window of the print.
     const live = layout ? nums.filter((i) => has(`${i}.mp4`)) : [];
@@ -429,7 +523,7 @@ async function boothView(env, id, now, ctx) {
           .filter((i) => !has(`${i}.mp4`))
           .map((i) => {
             const [x, y, w, h] = layout.rects[i - 1];
-            return `<div class="vwait" style="left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}">${SPIN}Đang tải video…</div>`;
+            return `<div class="vwait" style="left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}">${SPIN}${t('videoLoading')}</div>`;
           })
           .join('')
       : '';
@@ -437,43 +531,43 @@ async function boothView(env, id, now, ctx) {
     const compose = live.length && !clipsComing;
     print =
       (clipsComing
-        ? `<div class="vnote">${SPIN}<span>Video Live đang được tải lên, vui lòng đợi ít phút. Trang sẽ tự cập nhật.</span></div>`
+        ? `<div class="vnote">${SPIN}<span>${t('videosComing')}</span></div>`
         : '') +
       `<div class="stage" style="width:min(100%, calc(68vh * ${aspect}))">` +
-      `<div class="print" style="aspect-ratio:${aspect}"><img src="${src('print.jpg')}" alt="Ảnh in">${videos}${pending}</div></div>` +
+      `<div class="print" style="aspect-ratio:${aspect}"><img src="${src('print.jpg')}" alt="${t('printAlt')}">${videos}${pending}</div></div>` +
       `<div class="dl">` +
       (compose
-        ? `<a class="btn" id="compose" href="#" role="button">${DL_ICON}<span>Tải video ghép</span></a>`
+        ? `<a class="btn" id="compose" href="#" role="button">${DL_ICON}<span>${t('downloadComposed')}</span></a>`
         : clipsComing
-          ? `<a class="btn off" aria-disabled="true">${DL_ICON}<span>Video đang tải lên…</span></a>`
+          ? `<a class="btn off" aria-disabled="true">${DL_ICON}<span>${t('videosUploading')}</span></a>`
           : '') +
-      `<a class="btn${compose || clipsComing ? ' small' : ''}" href="${src('print.jpg')}?dl=1" download>${DL_ICON}Tải ảnh in</a></div>` +
+      `<a class="btn${compose || clipsComing ? ' small' : ''}" href="${src('print.jpg')}?dl=1" download>${DL_ICON}${t('downloadPrint')}</a></div>` +
       (live.length ? SYNC_SCRIPT : '') +
-      (compose ? `<details class="cells bm" hidden></details>` + composeScript(id, live.map((i) => layout.rects[i - 1])) : '');
+      (compose ? `<details class="cells bm" hidden></details>` + composeScript(id, live.map((i) => layout.rects[i - 1]), lang) : '');
   }
   const cells = nums
     .map((i) => {
       const jpg = `${i}.jpg`, mp4 = `${i}.mp4`;
       const media = has(jpg)
-        ? `<img src="${src(jpg)}" alt="Ảnh ${i}">`
+        ? `<img src="${src(jpg)}" alt="${t('photo')} ${i}">`
         : has(mp4)
           ? `<video src="${src(mp4)}" muted autoplay loop playsinline preload="metadata"></video>`
-          : `<div class="wait">${waiting ? 'đang tải…' : 'không có'}</div>`;
-      const clip = has(mp4) ? dl(mp4, 'Clip') : waiting ? '<span class="muted">clip đang tải…</span>' : '';
-      const links = [has(jpg) ? dl(jpg, 'Ảnh') : '', clip].filter(Boolean).join(' · ');
+          : `<div class="wait">${waiting ? t('loading') : t('none')}</div>`;
+      const clip = has(mp4) ? dl(mp4, t('clip')) : waiting ? `<span class="muted">${t('clipLoading')}</span>` : '';
+      const links = [has(jpg) ? dl(jpg, t('photo')) : '', clip].filter(Boolean).join(' · ');
       return `<figure>${media}<div class="links">${links || '&nbsp;'}</div></figure>`;
     })
     .join('');
   return page(
-    'vi',
+    lang,
     title,
     BOOTH_STYLE +
       `<div class="brand">Photobooth</div><h1>${escapeHtml(title)}</h1>` +
       print +
       `<div class="bgrid">${cells}</div>` +
-      (times.length ? `<div class="note">Lưu về máy trước ngày ${vnDate(expiresAt(first, boothTtl(env)))}</div>` : '') +
-      `<p>"Tải video ghép": cả tấm ảnh với các clip chạy cùng lúc, thành một video. Chạm "Ảnh" hoặc "Clip" để tải từng cái.` +
-      ` Trên iPhone: mở bằng Safari.</p>` +
+      (times.length ? `<div class="note">${t('saveBefore', { date: dateFor(lang, expiresAt(first, boothTtl(env))) })}</div>` : '') +
+      `<p>${escapeHtml(t('help'))}</p>` +
+      langLinks(lang) +
       // While files are still coming: ask every 5 s how many are there, reload only when that changes.
       (waiting
         ? `<script>(()=>{let n=${Object.keys(files).length};setInterval(async()=>{try{` +
@@ -544,7 +638,7 @@ export default {
     if (st && isValidId(st[1]) && request.method === 'GET') return json({ n: Object.keys(await boothFiles(env, st[1])).length });
     const b = rest.match(/^\/b\/([a-z0-9]+)(?:\/(print\.jpg|[1-6]\.(?:jpg|mp4)))?$/);
     if (b && isValidId(b[1]) && (request.method === 'GET' || request.method === 'HEAD')) {
-      return b[2] ? boothFile(request, env, b[1], b[2], now, ctx) : boothView(env, b[1], now, ctx);
+      return b[2] ? boothFile(request, env, b[1], b[2], now, ctx) : boothView(env, b[1], now, ctx, pickLang(request));
     }
     // Fonts and anything else under /lde/ that is a static asset.
     if (env.ASSETS && (request.method === 'GET' || request.method === 'HEAD')) return env.ASSETS.fetch(request);

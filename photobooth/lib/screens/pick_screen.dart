@@ -9,6 +9,7 @@ import '../config.dart';
 import '../booth/print_layout.dart';
 import '../camera/filters.dart';
 import '../ui/lux.dart';
+import '../ui/strings.dart';
 import '../ui/sparkle.dart';
 
 /// 4 · Pick the frame's photos (tap order = print order, gold number badges) and a filter, with
@@ -194,12 +195,19 @@ class _PickScreenState extends State<PickScreen> {
                 children: [
                   Row(
                     children: [
-                      Text('Chọn $need tấm đẹp nhất ', style: LuxFonts.serif(size: 38, weight: FontWeight.w600, height: 1.15)),
-                      GoldText('(${guest.picks.length}/$need)', style: LuxFonts.serif(size: 38, weight: FontWeight.w600, height: 1.15), sweep: false),
+                      Text(
+                        T.now.pickBest(need),
+                        style: LuxFonts.serif(size: 38, weight: FontWeight.w600, height: 1.15),
+                      ),
+                      GoldText(
+                        '(${guest.picks.length}/$need)',
+                        style: LuxFonts.serif(size: 38, weight: FontWeight.w600, height: 1.15),
+                        sweep: false,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text('Chạm để chọn · chạm lại để bỏ', style: LuxFonts.sans(size: 18, color: Lux.ivoryA(0.68))),
+                  Text(T.now.tapToPick, style: LuxFonts.sans(size: 18, color: Lux.ivoryA(0.68))),
                 ],
               ),
             ),
@@ -209,9 +217,15 @@ class _PickScreenState extends State<PickScreen> {
         ),
         const SizedBox(height: 22),
         if (_failed)
-          Expanded(child: Center(child: Text('Không xử lý được ảnh.\nBấm "Chụp lại" nhé!', textAlign: TextAlign.center, style: LuxFonts.serif(size: 32))))
+          Expanded(
+            child: Center(
+              child: Text(T.now.cannotProcess, textAlign: TextAlign.center, style: LuxFonts.serif(size: 32)),
+            ),
+          )
         else if (images == null)
-          const Expanded(child: Center(child: CircularProgressIndicator(color: Lux.champagne)))
+          const Expanded(
+            child: Center(child: CircularProgressIndicator(color: Lux.champagne)),
+          )
         else
           GridView.count(
             crossAxisCount: cols,
@@ -232,14 +246,14 @@ class _PickScreenState extends State<PickScreen> {
             ],
           ),
         const Spacer(),
-        Text('BỘ LỌC', style: LuxFonts.eyebrow(size: 14)),
+        Text(T.now.filters, style: LuxFonts.eyebrow(size: 14)),
         const SizedBox(height: 14),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (final f in BoothFilter.values)
               _FilterChip(
-                name: f.label,
+                name: T.now.filterNames[f.name] ?? f.label,
                 thumb: _thumbs[f],
                 on: f == _filter,
                 onTap: f == _filter || _printing ? null : () => _develop(f),
@@ -262,7 +276,10 @@ class _PickScreenState extends State<PickScreen> {
       padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
       child: Column(
         children: [
-          Align(alignment: Alignment.centerLeft, child: Text('XEM TRƯỚC TẤM IN', style: LuxFonts.eyebrow(size: 14))),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(T.now.printPreview, style: LuxFonts.eyebrow(size: 14)),
+          ),
           const SizedBox(height: 22),
           SizedBox(
             height: 300,
@@ -273,7 +290,9 @@ class _PickScreenState extends State<PickScreen> {
                   left: -24,
                   right: -24,
                   child: const DecoratedBox(
-                    decoration: BoxDecoration(gradient: RadialGradient(colors: [Color(0x38D4AF6A), Color(0x00D4AF6A)], stops: [0, 0.7])),
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(colors: [Color(0x38D4AF6A), Color(0x00D4AF6A)], stops: [0, 0.7]),
+                    ),
                   ),
                 ),
                 AnimatedSwitcher(
@@ -293,10 +312,14 @@ class _PickScreenState extends State<PickScreen> {
                         painter: PrintPainter(
                           PrintSpec(
                             layout: guest.layout,
-                            photos: [for (var k = 0; k < need; k++) k < guest.picks.length && images != null ? images[guest.picks[k]] : null],
+                            photos: [
+                              for (var k = 0; k < need; k++)
+                                k < guest.picks.length && images != null ? images[guest.picks[k]] : null,
+                            ],
                             title: s.title,
                             dateLine: s.dateLine,
                             subtitle: s.subtitle,
+                            scanHint: T.now.printScanHint,
                           ),
                         ),
                       ),
@@ -310,25 +333,42 @@ class _PickScreenState extends State<PickScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Khung ${guest.layout.label} · ', style: LuxFonts.serif(size: 24, weight: FontWeight.w600)),
-              GoldText(_filter.label, style: LuxFonts.serif(size: 24, weight: FontWeight.w600), sweep: false),
+              Text(T.now.frameName(guest.layout.label), style: LuxFonts.serif(size: 24, weight: FontWeight.w600)),
+              GoldText(
+                T.now.filterNames[_filter.name] ?? _filter.label,
+                style: LuxFonts.serif(size: 24, weight: FontWeight.w600),
+                sweep: false,
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text('Ô 1 → $need theo thứ tự bạn chọn', style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.62))),
+          Text(T.now.slotsInOrder(need), style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.62))),
           const Spacer(),
           Container(
             height: 1,
             margin: const EdgeInsets.only(bottom: 20),
-            decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0x00D4AF6A), Color(0x80D4AF6A), Color(0x00D4AF6A)])),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0x00D4AF6A), Color(0x80D4AF6A), Color(0x00D4AF6A)]),
+            ),
           ),
           Row(
             children: [
-              LineButton(label: 'Chụp lại', icon: Icons.replay, width: 156, height: 88, fontSize: 21, onPressed: _printing ? null : widget.onRetake),
+              LineButton(
+                label: T.now.retake,
+                icon: Icons.replay,
+                width: 156,
+                height: 88,
+                fontSize: 21,
+                onPressed: _printing ? null : widget.onRetake,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: GoldButton(
-                  label: _printing ? 'Đang xử lý…' : (guest.complete ? (PRINTING ? 'In' : 'Xong') : 'Xong · còn ${need - guest.picks.length}'),
+                  label: _printing
+                      ? T.now.processing
+                      : (guest.complete
+                            ? (PRINTING ? T.now.print : T.now.done)
+                            : T.now.doneMore(need - guest.picks.length)),
                   icon: guest.complete && !_printing ? Icons.arrow_forward : null,
                   iconAfter: true,
                   fontSize: guest.complete ? 28 : 26,
@@ -346,7 +386,13 @@ class _PickScreenState extends State<PickScreen> {
 
 /// A shot: rounded, hairline gold; picked = shrinks a little, gold ring + glow, number badge pops.
 class _ShotTile extends StatelessWidget {
-  const _ShotTile({required this.image, required this.order, required this.dim, required this.developing, required this.onTap});
+  const _ShotTile({
+    required this.image,
+    required this.order,
+    required this.dim,
+    required this.developing,
+    required this.onTap,
+  });
   final ui.Image image;
   final int order;
   final bool dim;
@@ -405,9 +451,15 @@ class _ShotTile extends StatelessWidget {
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: Lux.button,
-                            boxShadow: [BoxShadow(color: Color(0x73000000), blurRadius: 14, offset: Offset(0, 4)), BoxShadow(color: Color(0x8CF5E1A4), blurRadius: 18)],
+                            boxShadow: [
+                              BoxShadow(color: Color(0x73000000), blurRadius: 14, offset: Offset(0, 4)),
+                              BoxShadow(color: Color(0x8CF5E1A4), blurRadius: 18),
+                            ],
                           ),
-                          child: Text('${order + 1}', style: LuxFonts.serif(size: 26, weight: FontWeight.w700, color: Lux.goldInk, height: 1)),
+                          child: Text(
+                            '${order + 1}',
+                            style: LuxFonts.serif(size: 26, weight: FontWeight.w700, color: Lux.goldInk, height: 1),
+                          ),
                         ),
                       ),
                     ),
@@ -451,7 +503,9 @@ class _FilterChip extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
-                  child: thumb == null ? const ColoredBox(color: Color(0xFF17141C)) : RawImage(image: thumb, fit: BoxFit.cover),
+                  child: thumb == null
+                      ? const ColoredBox(color: Color(0xFF17141C))
+                      : RawImage(image: thumb, fit: BoxFit.cover),
                 ),
               ),
             ),
@@ -462,7 +516,12 @@ class _FilterChip extends StatelessWidget {
                 name,
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                style: LuxFonts.sans(size: 15, height: 1.2, weight: on ? FontWeight.w600 : FontWeight.w400, color: on ? Lux.champagneLight : Lux.ivoryA(0.75)),
+                style: LuxFonts.sans(
+                  size: 15,
+                  height: 1.2,
+                  weight: on ? FontWeight.w600 : FontWeight.w400,
+                  color: on ? Lux.champagneLight : Lux.ivoryA(0.75),
+                ),
               ),
             ),
           ],
@@ -496,8 +555,12 @@ class _TimerPill extends StatelessWidget {
           Icon(Icons.timer_outlined, color: urgent ? Lux.urgentText : Lux.champagne, size: 26),
           const SizedBox(width: 10),
           Text(
-            '${seconds.clamp(0, 999)} giây',
-            style: LuxFonts.sans(size: 24, weight: FontWeight.w600, color: urgent ? Lux.urgentText : Lux.ivory).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+            T.now.secondsLeft(seconds.clamp(0, 999)),
+            style: LuxFonts.sans(
+              size: 24,
+              weight: FontWeight.w600,
+              color: urgent ? Lux.urgentText : Lux.ivory,
+            ).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
           ),
         ],
       ),
@@ -508,7 +571,8 @@ class _TimerPill extends StatelessWidget {
       key: ValueKey(seconds),
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 1000),
-      builder: (context, p, child) => Transform.scale(scale: 1 + 0.06 * Curves.easeInOut.transform(1 - (2 * p - 1).abs()), child: child),
+      builder: (context, p, child) =>
+          Transform.scale(scale: 1 + 0.06 * Curves.easeInOut.transform(1 - (2 * p - 1).abs()), child: child),
       child: pill,
     );
   }

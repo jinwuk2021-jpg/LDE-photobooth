@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../booth/booth.dart';
 import '../config.dart';
 import '../ui/lux.dart';
+import '../ui/strings.dart';
 import '../ui/sparkle.dart';
 import 'admin_screen.dart';
 
@@ -26,8 +27,10 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
   int _cornerTaps = 0;
   DateTime _firstTap = DateTime(0);
   Timer? _check;
-  late final AnimationController _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat(reverse: true);
-  late final AnimationController _halo = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))..repeat();
+  late final AnimationController _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 10))
+    ..repeat(reverse: true);
+  late final AnimationController _halo = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
+    ..repeat();
 
   @override
   void initState() {
@@ -65,7 +68,7 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
       child: ColoredBox(
         color: Lux.night,
         child: ListenableBuilder(
-          listenable: Listenable.merge([b.startImageVersion, b.settings]),
+          listenable: Listenable.merge([b.startImageVersion, b.settings, lang]),
           builder: (context, _) {
             final file = b.startImage;
             final image = file.existsSync() ? FileImage(file) : null;
@@ -85,8 +88,34 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
                       ImageFiltered(
                         imageFilter: ui.ImageFilter.blur(sigmaX: 26, sigmaY: 26),
                         child: ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([0.55, 0, 0, 0, 0, 0, 0.55, 0, 0, 0, 0, 0, 0.6, 0, 0, 0, 0, 0, 1, 0]),
-                          child: Transform.scale(scale: 2.1, child: Center(child: SizedBox(width: posterW, height: box.maxHeight, child: poster))),
+                          colorFilter: const ColorFilter.matrix([
+                            0.55,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0.55,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0.6,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            1,
+                            0,
+                          ]),
+                          child: Transform.scale(
+                            scale: 2.1,
+                            child: Center(
+                              child: SizedBox(width: posterW, height: box.maxHeight, child: poster),
+                            ),
+                          ),
                         ),
                       ),
                       const DecoratedBox(
@@ -101,11 +130,16 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
                       Center(
                         child: AnimatedBuilder(
                           animation: _breathe,
-                          builder: (context, child) => Transform.scale(scale: 1 + 0.015 * Curves.easeInOut.transform(_breathe.value), child: child),
+                          builder: (context, child) => Transform.scale(
+                            scale: 1 + 0.015 * Curves.easeInOut.transform(_breathe.value),
+                            child: child,
+                          ),
                           child: Container(
                             width: posterW,
                             height: box.maxHeight,
-                            decoration: const BoxDecoration(boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 80)]),
+                            decoration: const BoxDecoration(
+                              boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 80)],
+                            ),
                             child: poster,
                           ),
                         ),
@@ -117,6 +151,8 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
                       ],
                       const SparkleBackground(level: SparkleLevel.max),
                       Positioned(left: 24, top: 22, child: _StaffChip(booth: b)),
+                      // Language for this guest (left of the hidden admin corner).
+                      const Positioned(right: 130, top: 22, child: _LangSwitch()),
                       Positioned(
                         left: 0,
                         right: 0,
@@ -131,14 +167,26 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
                               children: [
                                 _Halo(_halo, delay: 0),
                                 _Halo(_halo, delay: 0.5),
-                                GoldButton(label: 'Chạm để bắt đầu', onPressed: widget.onStart, width: 440, height: 100, fontSize: 30),
+                                GoldButton(
+                                  label: T.now.start,
+                                  onPressed: widget.onStart,
+                                  width: 440,
+                                  height: 100,
+                                  fontSize: 30,
+                                ),
                               ],
                             ),
                           ),
                         ),
                       ),
                       // Hidden admin corner.
-                      Positioned(right: 0, top: 0, width: 110, height: 110, child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: _corner)),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        width: 110,
+                        height: 110,
+                        child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: _corner),
+                      ),
                     ],
                   );
                 },
@@ -173,11 +221,15 @@ class _GoldEdge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 1,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00D4AF6A), Lux.champagne, Color(0x00D4AF6A)]),
-        ),
-      );
+    width: 1,
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0x00D4AF6A), Lux.champagne, Color(0x00D4AF6A)],
+      ),
+    ),
+  );
 }
 
 /// Pill outline growing out of the CTA and fading (2.4 s, the second one half a cycle later).
@@ -188,26 +240,26 @@ class _Halo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: anim,
-        builder: (context, _) {
-          final p = const Cubic(.2, .7, .3, 1).transform((anim.value + delay) % 1.0);
-          return IgnorePointer(
-            child: Transform.scale(
-              scaleX: 1 + 0.32 * p,
-              scaleY: 1 + 0.6 * p,
-              child: Container(
-                width: 440,
-                height: 100,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Lux.champagneLight.withValues(alpha: 0.7 * (1 - p)), width: 1.5),
-                  boxShadow: [BoxShadow(color: Lux.champagneLight.withValues(alpha: 0.35 * (1 - p)), blurRadius: 30)],
-                ),
-              ),
+    animation: anim,
+    builder: (context, _) {
+      final p = const Cubic(.2, .7, .3, 1).transform((anim.value + delay) % 1.0);
+      return IgnorePointer(
+        child: Transform.scale(
+          scaleX: 1 + 0.32 * p,
+          scaleY: 1 + 0.6 * p,
+          child: Container(
+            width: 440,
+            height: 100,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Lux.champagneLight.withValues(alpha: 0.7 * (1 - p)), width: 1.5),
+              boxShadow: [BoxShadow(color: Lux.champagneLight.withValues(alpha: 0.35 * (1 - p)), blurRadius: 30)],
             ),
-          );
-        },
+          ),
+        ),
       );
+    },
+  );
 }
 
 /// The designed poster (when no event picture is set): night-navy arch, gold rays, LPE / Sum Up.
@@ -226,7 +278,12 @@ class _DesignedPoster extends StatelessWidget {
         height: 834,
         child: DecoratedBox(
           decoration: const BoxDecoration(
-            gradient: RadialGradient(center: Alignment(0, -0.4), radius: 1.2, colors: [Color(0xFF1D2448), Color(0xFF10132A), Lux.night], stops: [0, 0.45, 1]),
+            gradient: RadialGradient(
+              center: Alignment(0, -0.4),
+              radius: 1.2,
+              colors: [Color(0xFF1D2448), Color(0xFF10132A), Lux.night],
+              stops: [0, 0.45, 1],
+            ),
           ),
           child: Stack(
             children: [
@@ -248,7 +305,10 @@ class _DesignedPoster extends StatelessWidget {
                     if (tail.isNotEmpty)
                       Transform.translate(
                         offset: const Offset(0, -4),
-                        child: GoldText(tail, style: LuxFonts.serif(size: 92, weight: FontWeight.w400, italic: true, height: 1.05)),
+                        child: GoldText(
+                          tail,
+                          style: LuxFonts.serif(size: 92, weight: FontWeight.w400, italic: true, height: 1.05),
+                        ),
                       ),
                     const SizedBox(height: 20),
                     Row(
@@ -256,7 +316,10 @@ class _DesignedPoster extends StatelessWidget {
                       children: [
                         Container(width: 64, height: 1, color: Lux.champagne),
                         const SizedBox(width: 16),
-                        Text('${DateTime.now().year}', style: LuxFonts.serif(size: 30, weight: FontWeight.w400, spacing: 9)),
+                        Text(
+                          '${DateTime.now().year}',
+                          style: LuxFonts.serif(size: 30, weight: FontWeight.w400, spacing: 9),
+                        ),
                         const SizedBox(width: 16),
                         Container(width: 64, height: 1, color: Lux.champagne),
                       ],
@@ -283,18 +346,19 @@ class _ArchPainter extends CustomPainter {
     final c = Offset(size.width / 2, size.height * 0.36);
     final rays = Paint()
       ..strokeWidth = 4
-      ..shader = const RadialGradient(colors: [Color(0x24D4AF6A), Color(0x00D4AF6A)]).createShader(Rect.fromCircle(center: c, radius: size.height * 0.62));
+      ..shader = const RadialGradient(colors: [Color(0x24D4AF6A), Color(0x00D4AF6A)])
+          .createShader(Rect.fromCircle(center: c, radius: size.height * 0.62));
     for (var a = 0.0; a < 360; a += 7.5) {
       final r = a * math.pi / 180;
       canvas.drawLine(c, c + Offset(math.cos(r), math.sin(r)) * size.height * 0.62, rays);
     }
     RRect arch(double inset, double radius) => RRect.fromRectAndCorners(
-          Rect.fromLTRB(inset, inset, size.width - inset, size.height - inset),
-          topLeft: Radius.circular(radius),
-          topRight: Radius.circular(radius),
-          bottomLeft: const Radius.circular(6),
-          bottomRight: const Radius.circular(6),
-        );
+      Rect.fromLTRB(inset, inset, size.width - inset, size.height - inset),
+      topLeft: Radius.circular(radius),
+      topRight: Radius.circular(radius),
+      bottomLeft: const Radius.circular(6),
+      bottomRight: const Radius.circular(6),
+    );
     canvas.drawRRect(
       arch(44, 251),
       Paint()
@@ -313,7 +377,10 @@ class _ArchPainter extends CustomPainter {
     final foot = Offset(size.width / 2, size.height - 57);
     final sun = Paint()
       ..strokeWidth = 3
-      ..shader = const RadialGradient(colors: [Color(0x42D4AF6A), Color(0x00D4AF6A)], stops: [0.3, 0.72]).createShader(Rect.fromCircle(center: foot, radius: 200));
+      ..shader = const RadialGradient(
+        colors: [Color(0x42D4AF6A), Color(0x00D4AF6A)],
+        stops: [0.3, 0.72],
+      ).createShader(Rect.fromCircle(center: foot, radius: 200));
     for (var a = 180.0; a <= 360; a += 10) {
       final r = a * math.pi / 180;
       canvas.drawLine(foot, foot + Offset(math.cos(r), math.sin(r)) * 200, sun);
@@ -350,11 +417,11 @@ class _StaffChip extends StatelessWidget {
         final failing = booth.uploads.failingSessions;
         final printerOk = booth.settings.printerUrl == null ? false : booth.prints.printerOk;
         Widget dot(Color c, IconData icon) => Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: c.withValues(alpha: 0.2)),
-              child: Icon(icon, size: 14, color: c),
-            );
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: c.withValues(alpha: 0.2)),
+          child: Icon(icon, size: 14, color: c),
+        );
         return Glass(
           radius: 999,
           padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
@@ -371,12 +438,55 @@ class _StaffChip extends StatelessWidget {
                 const SizedBox(width: 14),
                 dot(printerOk == true ? const Color(0xFF7BD389) : Lux.urgent, Icons.print),
                 const SizedBox(width: 8),
-                Text(printerOk == true ? 'máy in ok' : 'máy in?', style: LuxFonts.sans(size: 15, weight: FontWeight.w500)),
+                Text(
+                  printerOk == true ? 'máy in ok' : 'máy in?',
+                  style: LuxFonts.sans(size: 15, weight: FontWeight.w500),
+                ),
               ],
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Tiếng Việt · English · 日本語, the current one in gold.
+class _LangSwitch extends StatelessWidget {
+  const _LangSwitch();
+
+  @override
+  Widget build(BuildContext context) {
+    return Glass(
+      radius: 999,
+      padding: const EdgeInsets.all(5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final l in Lang.values)
+            GestureDetector(
+              onTap: () => lang.value = l,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: l == lang.value ? Lux.button : null,
+                ),
+                child: Text(
+                  l.name,
+                  style: LuxFonts.sans(
+                    size: 18,
+                    weight: FontWeight.w600,
+                    color: l == lang.value ? Lux.goldInk : Lux.ivoryA(0.8),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
