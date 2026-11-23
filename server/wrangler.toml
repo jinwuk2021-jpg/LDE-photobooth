@@ -1,0 +1,32 @@
+# LDE event photobooth: share pages for the iPad app, at lenslycam.com/lde/*.
+# Separate from Lensly's own Worker (fct-share): own code, bucket and secret.
+# The route below is more specific than Lensly's lenslycam.com custom domain, so
+# /lde/* comes here and everything else still goes to Lensly.
+# Setup: see README.md in this folder.
+name = "lde-booth"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+routes = [{ pattern = "lenslycam.com/lde/*", zone_name = "lenslycam.com" }]
+
+# Session files: booth/<id>/<file>. Bucket lifecycle rule booth/ → 30 days as a backstop.
+[[r2_buckets]]
+binding = "BOOTH"
+bucket_name = "lde-booth"
+
+[vars]
+# Days a session stays online.
+BOOTH_TTL_DAYS = "30"
+# Largest file accepted (a 5 s Live clip is ~3 MB).
+BOOTH_MAX_BYTES = "20971520"
+
+# Page fonts (public/lde/fonts, served at /lde/fonts/*).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Daily sweep of expired sessions.
+[triggers]
+crons = ["17 3 * * *"]
+
+# Secret, not in this file:  npx wrangler secret put BOOTH_KEY

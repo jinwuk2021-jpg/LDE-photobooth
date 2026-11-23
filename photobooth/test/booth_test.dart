@@ -110,7 +110,7 @@ void main() {
             photos: const [],
             title: 'Tiệc cuối năm',
             dateLine: '23.11.2026',
-            qrUrl: 'https://lenslycam.com/b/abcdefghjkmn',
+            qrUrl: 'https://lenslycam.com/lde/b/abcdefghjkmn',
           ),
         );
         expect((img.width, img.height), (layout.size.width.round(), layout.size.height.round()));

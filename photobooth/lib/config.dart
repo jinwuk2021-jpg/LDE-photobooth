@@ -2,8 +2,8 @@
 // (flutter run --dart-define-from-file=booth_defines.json, see README).
 // ignore_for_file: constant_identifier_names
 
-/// Lensly's share Worker (server/share-worker in the Lensly repo).
-const String SHARE_API_URL = String.fromEnvironment('SHARE_API_URL', defaultValue: 'https://lenslycam.com');
+/// This booth's own share Worker (../server, "lde-booth"), at lenslycam.com/lde. Not Lensly's Worker.
+const String SHARE_API_URL = String.fromEnvironment('SHARE_API_URL', defaultValue: 'https://lenslycam.com/lde');
 
 /// The Worker's BOOTH_KEY secret. Empty = nothing is uploaded (files stay in the queue).
 const String BOOTH_KEY = String.fromEnvironment('BOOTH_KEY');
