@@ -8,7 +8,10 @@ const String SHARE_API_URL = String.fromEnvironment('SHARE_API_URL', defaultValu
 /// The Worker's BOOTH_KEY secret. Empty = nothing is uploaded (files stay in the queue).
 const String BOOTH_KEY = String.fromEnvironment('BOOTH_KEY');
 
-/// Least shots per guest (a frame with more windows gets 2 spare: BoothFrame.shots).
+/// Shots beyond the frame's windows, so the guest has some to choose from (BoothFrame.shots).
+const int SPARE_SHOTS = 2;
+
+/// Default shot count of the capture sequence (the booth always passes BoothFrame.shots).
 const int SHOTS = 6;
 
 /// Countdown seconds before the first shot and before each next one.

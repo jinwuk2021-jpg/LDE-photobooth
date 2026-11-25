@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -74,8 +73,8 @@ class BoothFrame {
   /// Photos the guest picks.
   int get picks => slots.length;
 
-  /// Shots taken: always 2 spare to choose from, at least [SHOTS].
-  int get shots => math.max(SHOTS, picks + 2);
+  /// Shots taken: the windows plus [SPARE_SHOTS] to choose from (2 Cut → 4, 6 Cut → 8).
+  int get shots => picks + SPARE_SHOTS;
 
   bool get landscape => size.width > size.height;
 

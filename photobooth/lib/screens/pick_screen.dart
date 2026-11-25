@@ -180,7 +180,9 @@ class _PickScreenState extends State<PickScreen> {
   Widget _left(GuestSession guest) {
     final images = _images;
     final need = guest.frame.picks;
-    final cols = guest.shots.length > 6 ? 4 : 3;
+    // 4 shots 2 × 2, 5–6 in rows of 3, 8 in rows of 4.
+    final n = guest.shots.length;
+    final cols = n <= 4 ? 2 : (n <= 6 ? 3 : 4);
     final tileH = cols == 4 ? 118.0 : 162.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

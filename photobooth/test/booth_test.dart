@@ -69,8 +69,8 @@ void main() {
     expect(two.picks, [4, 1]);
   });
 
-  test('2 spare shots, at least 6', () {
-    expect({for (final f in frames) f.label: f.shots}, {'2 Cut': 6, '3 Cut': 6, '4 Cut': 6, '6 Cut': 8});
+  test('2 spare shots: the windows + 2', () {
+    expect({for (final f in frames) f.label: f.shots}, {'2 Cut': 4, '3 Cut': 5, '4 Cut': 6, '6 Cut': 8});
   });
 
   test('layout.json: one window per photo, fractions of the card', () {

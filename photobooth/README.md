@@ -4,7 +4,7 @@ App photobooth cho một sự kiện, chạy trên iPad Pro 11" (M4), xoay ngang
 Dùng lại từ Lensly: camera và clip Live (`packages/film_camera`, live recorder, ring buffer), chuỗi chụp tự động,
 6 filter, làm mịn da, bảng màu và font, cùng máy chủ chia sẻ (Worker `lenslycam.com`, trang `/b/<id>`).
 
-Luồng: màn chờ → chọn khung (các khung đang bật trong admin) → chụp (số ô + 2 tấm, ít nhất 6) → chọn ảnh và filter trong thời gian giới hạn (mặc định 45 giây, chỉnh trong admin; hết giờ tự chọn đủ và in) → In → màn cảm ơn có QR. QR chỉ được tạo khi bấm In và in ở vị trí cố định của từng khung. 4 Cut là khổ ngang, khi in được xoay sẵn cho vừa giấy dọc.
+Luồng: màn chờ → chọn khung (các khung đang bật trong admin) → chụp (số ô + 2 tấm: 2 Cut chụp 4, 3 Cut chụp 5, 4 Cut chụp 6, 6 Cut chụp 8) → chọn ảnh và filter trong thời gian giới hạn (mặc định 45 giây, chỉnh trong admin; hết giờ tự chọn đủ và in) → In → màn cảm ơn có QR. QR chỉ được tạo khi bấm In và in ở vị trí cố định của từng khung. 4 Cut là khổ ngang, khi in được xoay sẵn cho vừa giấy dọc.
 
 ## Build (chỉ cài lên iPad của mình, không lên App Store)
 
