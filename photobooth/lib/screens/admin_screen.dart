@@ -162,16 +162,31 @@ class _AdminScreenState extends State<AdminScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Text('Làm sáng bản in: ', style: LuxFonts.sans(size: 18)),
+                  Text('Độ đậm màu: ', style: LuxFonts.sans(size: 18)),
+                  SegmentedButton<PrintColor>(
+                    segments: [for (final c in PrintColor.values) ButtonSegment(value: c, label: Text(c.label))],
+                    selected: {b.settings.printColor},
+                    onSelectionChanged: (v) => b.settings.printColor = v.first,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text('Độ sáng: ', style: LuxFonts.sans(size: 18)),
                   SegmentedButton<int>(
                     segments: [
-                      for (final v in const [0, 5, 10, 15])
-                        ButtonSegment(value: v, label: Text(v == 0 ? 'Không' : '+$v%')),
+                      for (final v in const [-10, -5, 0, 5, 10])
+                        ButtonSegment(value: v, label: Text(v == 0 ? 'Chuẩn' : '${v > 0 ? '+' : ''}$v%')),
                     ],
                     selected: {b.settings.printBrighten},
                     onSelectionChanged: (v) => b.settings.printBrighten = v.first,
                   ),
                 ],
+              ),
+              Text(
+                'Chỉ áp dụng cho bản gửi máy in; ảnh trên màn hình, trang tải ảnh và app Ảnh giữ màu gốc.',
+                style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,

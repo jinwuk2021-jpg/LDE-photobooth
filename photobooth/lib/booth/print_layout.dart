@@ -93,9 +93,52 @@ Future<ui.Image> renderPrint(PrintSpec spec) {
   return rec.endRecording().toImage(s.width.round(), s.height.round());
 }
 
+/// How rich the printer copy's colours are. The SELPHY's dye-sub prints come out paler and
+/// flatter than the screen, so the copy sent to it gets more saturation and contrast.
+enum PrintColor {
+  plain('Gốc', 1, 1),
+  medium('Vừa', 1.12, 1.05),
+  rich('Đậm', 1.25, 1.10),
+  richer('Rất đậm', 1.4, 1.16);
+
+  const PrintColor(this.label, this.saturation, this.contrast);
+  final String label;
+  final double saturation;
+  final double contrast;
+
+  static PrintColor byName(String? name) => values.firstWhere((v) => v.name == name, orElse: () => PrintColor.rich);
+}
+
+/// One colour matrix for the printer copy: [saturation] (1 = as is, around Rec. 709 luma), then
+/// [contrast] around mid grey, then [brighten] as a plain gain (0.1 = 10 % brighter, −0.05 = 5 %
+/// darker; black stays black, so nothing goes milky).
+List<double> printMatrix({double saturation = 1, double contrast = 1, double brighten = 0}) {
+  const lr = 0.2126, lg = 0.7152, lb = 0.0722;
+  final s = saturation, c = contrast * (1 + brighten);
+  final sat = [
+    [lr * (1 - s) + s, lg * (1 - s), lb * (1 - s)],
+    [lr * (1 - s), lg * (1 - s) + s, lb * (1 - s)],
+    [lr * (1 - s), lg * (1 - s), lb * (1 - s) + s],
+  ];
+  final off = 128 * (1 - contrast) * (1 + brighten);
+  return [
+    for (final row in sat) ...[for (final v in row) v * c, 0, off],
+    0,
+    0,
+    0,
+    1,
+    0,
+  ];
+}
+
 /// [card] as the printer takes it: always portrait (a landscape card turned a quarter,
-/// clockwise unless [counterClockwise]), [brighten] lifted (0.1 = +10 %: dye-sub prints run dark).
-Future<ui.Image> forPrinter(ui.Image card, {bool counterClockwise = false, double brighten = 0}) {
+/// clockwise unless [counterClockwise]), colours through [color] and [brighten] ([printMatrix]).
+Future<ui.Image> forPrinter(
+  ui.Image card, {
+  bool counterClockwise = false,
+  PrintColor color = PrintColor.plain,
+  double brighten = 0,
+}) {
   final landscape = card.width > card.height;
   final w = landscape ? card.height : card.width, h = landscape ? card.width : card.height;
   final rec = ui.PictureRecorder();
@@ -111,15 +154,15 @@ Future<ui.Image> forPrinter(ui.Image card, {bool counterClockwise = false, doubl
         ..rotate(math.pi / 2);
     }
   }
-  final k = 1 + brighten, add = 255 * brighten * 0.5;
+  final same = color == PrintColor.plain && brighten == 0;
   canvas.drawImage(
     card,
     Offset.zero,
     Paint()
       ..filterQuality = FilterQuality.high
-      ..colorFilter = brighten == 0
+      ..colorFilter = same
           ? null
-          : ColorFilter.matrix([k, 0, 0, 0, add, 0, k, 0, 0, add, 0, 0, k, 0, add, 0, 0, 0, 1, 0]),
+          : ColorFilter.matrix(printMatrix(saturation: color.saturation, contrast: color.contrast, brighten: brighten)),
   );
   return rec.endRecording().toImage(w, h);
 }

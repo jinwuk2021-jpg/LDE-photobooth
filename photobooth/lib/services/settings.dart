@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../booth/print_layout.dart';
 import '../camera/skin_smooth.dart';
 
 /// What the staff can change in the admin screen. Kept across launches.
@@ -49,10 +50,15 @@ class BoothSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lift for the printer copy, in percent (0, 5, 10, 15).
-  int get printBrighten => _prefs.getInt('printBrighten') ?? 0;
+  /// Colour richness of the printer copy (SELPHY prints run pale). Default: Đậm.
+  PrintColor get printColor => PrintColor.byName(_prefs.getString('printColor'));
+  set printColor(PrintColor v) => _set('printColor', v.name);
+
+  /// Brightness of the printer copy in percent (−10 … +10). A new key: the old "Làm sáng"
+  /// (+5 / +10 %) also lifted the blacks and made prints milky, so it starts again from 0.
+  int get printBrighten => _prefs.getInt('printLight') ?? 0;
   set printBrighten(int v) {
-    _prefs.setInt('printBrighten', v);
+    _prefs.setInt('printLight', v);
     notifyListeners();
   }
 

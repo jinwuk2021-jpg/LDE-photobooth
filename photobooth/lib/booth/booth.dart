@@ -173,11 +173,12 @@ class Booth {
     }
   }
 
-  /// The file the printer gets: portrait (4 Cut turned) and brightened as set in admin.
+  /// The file the printer gets: portrait (4 Cut turned), colours as set in admin.
   Future<String> printerCopy(ui.Image card, String path) async {
     final copy = await forPrinter(
       card,
       counterClockwise: settings.turnCounterClockwise,
+      color: settings.printColor,
       brighten: settings.printBrighten / 100,
     );
     try {

@@ -206,6 +206,36 @@ void main() {
       });
     }
 
+    test('print colours: richer = more saturated and contrasty, greys stay grey, black stays black', () {
+      List<double> apply(List<double> m, List<double> rgb) => [
+        for (var r = 0; r < 3; r++)
+          (m[r * 5] * rgb[0] + m[r * 5 + 1] * rgb[1] + m[r * 5 + 2] * rgb[2] + m[r * 5 + 4]).clamp(0, 255).toDouble(),
+      ];
+      for (final c in PrintColor.values) {
+        final m = printMatrix(saturation: c.saturation, contrast: c.contrast);
+        final grey = apply(m, [128, 128, 128]);
+        for (final v in grey) {
+          expect(v, closeTo(128, 0.01), reason: c.name);
+        }
+        expect(apply(m, [0, 0, 0]), everyElement(0.0), reason: c.name);
+      }
+      // A muted skin tone: further from grey and with a wider light / dark spread as the level rises.
+      double spread(PrintColor c) {
+        final m = printMatrix(saturation: c.saturation, contrast: c.contrast);
+        final o = apply(m, [200, 150, 130]);
+        return o[0] - o[2];
+      }
+
+      final spreads = PrintColor.values.map(spread).toList();
+      for (var i = 1; i < spreads.length; i++) {
+        expect(spreads[i], greaterThan(spreads[i - 1]));
+      }
+      expect(PrintColor.byName(null), PrintColor.rich);
+      // Brightness is a gain: black stays black.
+      expect(apply(printMatrix(brighten: 0.1), [0, 0, 0]), everyElement(0.0));
+      expect(apply(printMatrix(brighten: 0.1), [100, 100, 100]).first, closeTo(110, 0.01));
+    });
+
     test('cover crop: fills the window, centred across, biased 10 % up', () {
       // A 3:2 photo into a square: the sides go.
       expect(coverSource(const Size(300, 200), const Size(100, 100)), const Rect.fromLTWH(50, 0, 200, 200));
@@ -226,6 +256,8 @@ void main() {
       Future<int> red(ui.Image img) async => (await img.toByteData())!.getUint8(0);
       final lifted = await forPrinter(portrait, brighten: 0.1);
       expect(await red(lifted), greaterThan(await red(same)));
+      final darker = await forPrinter(portrait, brighten: -0.1);
+      expect(await red(darker), lessThan(await red(same)));
     });
 
     test('renders every frame with photos in the windows; landscape is turned portrait for the printer', () async {

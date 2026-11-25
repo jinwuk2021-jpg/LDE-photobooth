@@ -53,8 +53,10 @@ Tấm in thử có QR trỏ tới một link giả (`.../b/testtesttest`): trang
 |---|---|
 | Có viền trắng quanh ảnh | **Kiểu in: Tràn lề** (mặc định) |
 | Bị cắt mất chữ hoặc QR ở mép | **Kiểu in: Vừa khổ (có viền)** |
-| Ảnh in ra tối, màu vàng bị xỉn | **Làm sáng bản in: +5%**, chưa đủ thì **+10%** |
-| Ảnh bị cháy, mất chi tiết vùng sáng | giảm **Làm sáng** về Không |
+| Màu in ra nhạt, thiếu đậm | **Độ đậm màu: Rất đậm** (mặc định là Đậm) |
+| Màu quá gắt, da bị đỏ / cam | **Độ đậm màu: Vừa** |
+| Ảnh in ra tối, màu vàng bị xỉn | **Độ sáng: +5%**, chưa đủ thì **+10%** |
+| Ảnh nhạt, bị bạc / mờ như phủ sương | **Độ sáng: −5%** (và kiểm tra Độ đậm màu) |
 | Tấm 4 Cut lộn đầu | bật **Xoay 4 Cut theo chiều ngược lại** |
 
 Các tuỳ chọn này áp dụng cho mọi lần in sau, kể cả In lại. Ảnh gửi lên web không bị ảnh hưởng.
