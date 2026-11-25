@@ -17,6 +17,10 @@ không cần build lại app.
 - [ ] iPhone: Cài đặt → Điểm truy cập cá nhân → bật **Tối đa hoá tương thích** (để phát sóng 2.4 GHz)
 - [ ] SELPHY: Menu → Cài đặt Wi‑Fi → Kết nối Wi‑Fi → chọn tên hotspot của iPhone → nhập mật khẩu
   (**không** dùng chế độ "Kết nối trực tiếp", vì iPad sẽ mất internet và không upload được)
+- [ ] SELPHY: Cài đặt → Cài đặt máy in → **Tiết kiệm điện (Power Saving): Tắt**. Mặc định máy tự tắt sau ~5 phút
+  không dùng, đây là lý do hay gặp nhất khiến app "mất" máy in giữa sự kiện. (Tên mục có thể khác chút tuỳ ngôn ngữ máy.)
+- [ ] Cắm SELPHY vào nguồn điện, không chạy pin
+- [ ] iPhone làm hotspot: cắm sạc, để màn hình sáng hoặc ở trang Điểm truy cập cá nhân (hotspot ít bị ngắt hơn)
 - [ ] iPad vào cùng hotspot đó
 - [ ] Thử ngoài app trước: mở app Ảnh trên iPad → chọn 1 ảnh → Chia sẻ → In → xem SELPHY có hiện trong danh sách và in được không
   - Không thấy máy in: tắt/bật lại SELPHY, kiểm tra iPhone và SELPHY cùng mạng, thử tắt rồi bật lại hotspot
@@ -29,6 +33,12 @@ Mở admin: giữ ngón tay ở góc trên bên phải màn chờ 3 giây.
 - [ ] **Chọn máy in** → chọn SELPHY
   (nếu iPad hỏi quyền "Mạng cục bộ" thì bấm **Cho phép**)
 - [ ] **Kiểm tra kết nối** → phải báo "Máy in trả lời: OK"
+- [ ] Dưới tên máy in phải có chấm xanh **Máy in đang kết nối · trả lời lúc …**
+
+App tự giữ kết nối: hỏi máy in mỗi 15 giây khi không thấy (mỗi 60 giây khi đang ổn), và hỏi lại ngay khi mở
+lại app. Nếu máy in mất kết nối lúc khách bấm in, tấm đó **không bị mất**: nằm chờ ("Đang chờ máy in kết nối lại")
+và tự in khi máy in có lại. Máy in báo lỗi (hết giấy, kẹt giấy…) thì app tự thử lại 3 lần (sau 15, 30, 60 giây)
+rồi mới báo **Lỗi** trong admin; khi đó sửa máy in rồi bấm **In lại**.
 
 ## 3. In thử từng khung (ghi lại kết quả)
 

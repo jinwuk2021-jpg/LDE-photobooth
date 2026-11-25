@@ -40,7 +40,10 @@ Future<void> main() async {
     settings: settings,
     camera: BoothCamera(),
     uploads: UploadQueue(docs: docs, stateFile: File(p.join(support.path, 'upload_queue.json')))..load(),
-    prints: PrintQueue(prefs, settings, docs)..load(),
+    // Printer watchdog from launch: asks the SELPHY every 15 s while it is away, every 60 s once it answers.
+    prints: PrintQueue(prefs, settings, docs)
+      ..load()
+      ..start(),
     frames: frames,
   );
   // Playfair Display + Be Vietnam Pro (fetched once, then cached by google_fonts).

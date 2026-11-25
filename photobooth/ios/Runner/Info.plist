@@ -77,6 +77,11 @@
 	<string>Lưu ảnh in có mã QR vào app Ảnh.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Photobooth tìm và in qua máy in AirPrint trong cùng mạng.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_ipp._tcp</string>
+		<string>_ipps._tcp</string>
+	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

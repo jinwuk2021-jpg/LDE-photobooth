@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,7 +39,7 @@ abstract final class PrinterChannel {
 enum JobStatus { waiting, printing, done, failed }
 
 class PrintJob {
-  PrintJob({required this.path, required this.created, this.status = JobStatus.waiting, this.error});
+  PrintJob({required this.path, required this.created, this.status = JobStatus.waiting, this.error, this.attempts = 0});
 
   factory PrintJob.fromJson(Map<String, Object?> j) => PrintJob(
     path: j['path']! as String,
@@ -49,38 +51,83 @@ class PrintJob {
       _ => JobStatus.failed,
     },
     error: j['error'] as String?,
+    attempts: (j['attempts'] as num?)?.toInt() ?? 0,
   );
 
   /// The print JPEG, relative to the documents directory (`Booth/<day>/<time>/print.jpg`).
   final String path;
   final DateTime created;
   JobStatus status;
+
+  /// Why it failed, or (while waiting) why it has not gone yet.
   String? error;
+
+  /// Times it was sent and refused (drives the automatic retries).
+  int attempts;
+
+  /// Held back after a refusal until its retry timer fires. In memory only: a relaunch tries at once.
+  bool held = false;
 
   Map<String, Object?> toJson() => {
     'path': path,
     'created': created.toIso8601String(),
     'status': status.name,
     'error': error,
+    'attempts': attempts,
   };
 }
 
 /// Sends prints one by one: the next job goes only after the previous one's completion handler ran.
+///
+/// AirPrint keeps no open connection: each job finds the printer again by its saved URL (the
+/// Bonjour name when picked from the list, so a new IP address on the hotspot does not matter).
+/// What goes wrong is the printer being asleep, off or off the network at that moment, so:
+/// - a watchdog asks the printer every [offlineEvery] while it does not answer (every
+///   [onlineEvery] while it does), from launch on, and again when the app comes back to the front;
+/// - a job is only sent once the printer answers; until then it waits (never lost, never failed)
+///   and goes as soon as the printer is back;
+/// - a job the printer refuses is retried by itself [autoRetries] times (15 s, 30 s, 60 s apart)
+///   before it shows as failed in admin. A job that timed out is not: it may have printed.
 class PrintQueue extends ChangeNotifier {
-  PrintQueue(this._prefs, this._settings, this.docs);
+  PrintQueue(
+    this._prefs,
+    this._settings,
+    this.docs, {
+    Future<bool> Function(String url)? reachable,
+    Future<String?> Function(String url, String path, bool fill)? send,
+  }) : _reachable = reachable ?? PrinterChannel.reachable,
+       _send = send ?? ((url, path, fill) => PrinterChannel.printFile(url, path, fill: fill));
 
   final SharedPreferences _prefs;
   final Directory docs;
   final BoothSettings _settings;
+  final Future<bool> Function(String url) _reachable;
+  final Future<String?> Function(String url, String path, bool fill) _send;
   final List<PrintJob> _jobs = [];
   bool _busy = false;
+  Timer? _watchdog;
+  final Set<Timer> _retryTimers = {};
+  AppLifecycleListener? _lifecycle;
 
-  /// Last result: null = nothing printed yet, true = ok, false = last job failed or printer unreachable.
+  static const offlineEvery = Duration(seconds: 15);
+  static const onlineEvery = Duration(seconds: 60);
+  static const autoRetries = 3;
+  static const retryBase = Duration(seconds: 15);
+  static const contactTimeout = Duration(seconds: 12);
+  static const printTimeout = Duration(minutes: 3);
+  static const _timeoutError = 'Máy in không phản hồi sau 3 phút';
+  static const waitingForPrinter = 'Đang chờ máy in kết nối lại';
+
+  /// Last result: null = not asked yet, true = answers / last job ok, false = unreachable or last job failed.
   bool? printerOk;
+
+  /// When the printer last answered (admin shows it).
+  DateTime? lastSeen;
 
   /// Newest first, the last 50.
   List<PrintJob> get jobs => _jobs.reversed.toList();
   int get failedCount => _jobs.where((j) => j.status == JobStatus.failed).length;
+  int get waitingCount => _jobs.where((j) => j.status == JobStatus.waiting).length;
 
   void load() {
     try {
@@ -88,6 +135,31 @@ class PrintQueue extends ChangeNotifier {
       _jobs.addAll(list.map((e) => PrintJob.fromJson((e as Map).cast<String, Object?>())));
     } catch (_) {}
     _pump();
+  }
+
+  /// Starts the watchdog (and re-checks when the iPad wakes the app). Called once from main().
+  void start({bool watchLifecycle = true}) {
+    if (watchLifecycle) _lifecycle ??= AppLifecycleListener(onResume: () => check());
+    _tick();
+  }
+
+  void _tick() {
+    _watchdog?.cancel();
+    unawaited(
+      check().whenComplete(() {
+        _watchdog = Timer(printerOk == true ? onlineEvery : offlineEvery, _tick);
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    _watchdog?.cancel();
+    for (final t in _retryTimers) {
+      t.cancel();
+    }
+    _lifecycle?.dispose();
+    super.dispose();
   }
 
   void add(String absolutePath) {
@@ -101,28 +173,36 @@ class PrintQueue extends ChangeNotifier {
     _pump();
   }
 
-  /// Printing was switched on: send what is waiting.
+  /// Printing was switched on (or a printer picked): send what is waiting.
   void resume() => _pump();
 
+  /// "In lại" in admin: sends it now, with a fresh set of automatic retries.
   void retry(PrintJob job) {
     job
       ..status = JobStatus.waiting
-      ..error = null;
+      ..error = null
+      ..attempts = 0
+      ..held = false;
     _save();
     _pump();
   }
 
-  /// Checks the printer is on the network (start screen badge).
+  /// Asks the printer whether it is there; sends waiting jobs when it is.
   Future<void> check() async {
     if (!_settings.printing) return;
     final url = _settings.printerUrl;
     if (url == null || _busy) return;
-    final ok = await PrinterChannel.reachable(url);
+    final ok = await _ask(url);
+    if (ok) lastSeen = DateTime.now();
     if (ok != printerOk) {
       printerOk = ok;
       notifyListeners();
     }
+    if (ok) await _pump();
   }
+
+  Future<bool> _ask(String url) =>
+      _reachable(url).then<bool>((v) => v).timeout(contactTimeout, onTimeout: () => false).catchError((_) => false);
 
   void _save() {
     while (_jobs.length > 50) {
@@ -134,29 +214,65 @@ class PrintQueue extends ChangeNotifier {
 
   Future<void> _pump() async {
     if (_busy || !_settings.printing) return;
-    final job = _jobs.where((j) => j.status == JobStatus.waiting).firstOrNull;
+    final job = _jobs.where((j) => j.status == JobStatus.waiting && !j.held).firstOrNull;
     if (job == null) return;
-    _busy = true;
-    job.status = JobStatus.printing;
-    _save();
     final url = _settings.printerUrl;
     final file = p.join(docs.path, job.path);
-    final String? error;
+    _busy = true;
+    String? error;
     if (url == null) {
       error = 'Chưa chọn máy in';
     } else if (!File(file).existsSync()) {
       error = 'Không tìm thấy file ảnh in';
+    } else if (!await _ask(url)) {
+      // Asleep / off / off the hotspot: the job keeps its place and goes when the watchdog sees
+      // the printer again. Not a failure, so no retry is used up.
+      job.error = waitingForPrinter;
+      printerOk = false;
+      _busy = false;
+      _save();
+      return;
     } else {
-      // A printer that never answers (out of paper, switched off mid-job) must not stop the queue.
-      error = await PrinterChannel.printFile(
-        url,
-        file,
-        fill: _settings.printFill,
-      ).timeout(const Duration(minutes: 3), onTimeout: () => 'Máy in không phản hồi sau 3 phút');
+      lastSeen = DateTime.now();
+      job
+        ..status = JobStatus.printing
+        ..error = null;
+      _save();
+      // A printer that never answers (out of paper, switched off mid-job) must not stop the queue,
+      // and nothing thrown may leave the job stuck on "printing".
+      try {
+        error = await _send(
+          url,
+          file,
+          _settings.printFill,
+        ).then<String?>((v) => v).timeout(printTimeout, onTimeout: () => _timeoutError);
+      } catch (e) {
+        error = '$e';
+      }
+      job.attempts++;
     }
-    job
-      ..status = error == null ? JobStatus.done : JobStatus.failed
-      ..error = error;
+    final retryable = error != null && url != null && error != _timeoutError && job.attempts > 0;
+    if (error == null) {
+      job
+        ..status = JobStatus.done
+        ..error = null;
+    } else if (retryable && job.attempts <= autoRetries) {
+      job
+        ..status = JobStatus.waiting
+        ..error = '$error · tự thử lại (${job.attempts}/$autoRetries)'
+        ..held = true;
+      late final Timer t;
+      t = Timer(retryBase * (1 << (job.attempts - 1)), () {
+        _retryTimers.remove(t);
+        job.held = false;
+        _pump();
+      });
+      _retryTimers.add(t);
+    } else {
+      job
+        ..status = JobStatus.failed
+        ..error = error;
+    }
     printerOk = error == null;
     _busy = false;
     _save();

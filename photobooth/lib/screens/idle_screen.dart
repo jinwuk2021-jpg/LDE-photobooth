@@ -25,7 +25,6 @@ class IdleScreen extends StatefulWidget {
 
 class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
   Timer? _hold;
-  Timer? _check;
   late final AnimationController _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 10))
     ..repeat(reverse: true);
   late final AnimationController _halo = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
@@ -34,13 +33,12 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    // Back from a guest: ask the printer now (the queue's watchdog keeps asking on its own).
     widget.booth.prints.check();
-    _check = Timer.periodic(const Duration(seconds: 60), (_) => widget.booth.prints.check());
   }
 
   @override
   void dispose() {
-    _check?.cancel();
     _hold?.cancel();
     _breathe.dispose();
     _halo.dispose();

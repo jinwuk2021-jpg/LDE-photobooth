@@ -45,7 +45,10 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _pickPrinter() async {
     final picked = await PrinterChannel.pick();
-    if (picked != null) await widget.booth.settings.setPrinter(picked.$1, picked.$2);
+    if (picked != null) {
+      await widget.booth.settings.setPrinter(picked.$1, picked.$2);
+      await widget.booth.prints.check();
+    }
   }
 
   /// A [frame] card with numbered windows and a QR, sent exactly like a guest's (landscape turned).
@@ -103,13 +106,14 @@ class _AdminScreenState extends State<AdminScreen> {
               value: b.settings.printing,
               onChanged: (v) {
                 b.settings.printing = v;
-                if (v) b.prints.resume();
+                if (v) b.prints.check();
               },
             ),
             if (b.settings.printing) ...[
               Text(b.settings.printerName ?? 'Chưa chọn máy in', style: LuxFonts.sans(size: 18)),
               if (b.settings.printerUrl != null)
                 Text(b.settings.printerUrl!, style: LuxFonts.sans(size: 13, color: Lux.ivoryA(0.5))),
+              if (b.settings.printerUrl != null) _printerStatus(b),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 12,
@@ -347,6 +351,35 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
+  /// "● Máy in đang kết nối · trả lời lúc 14:02:10 · 1 tấm đang chờ".
+  Widget _printerStatus(Booth b) {
+    final q = b.prints;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final seen = q.lastSeen;
+    final (text, color) = switch (q.printerOk) {
+      true => ('Máy in đang kết nối', const Color(0xFF7BD389)),
+      false => ('Không thấy máy in, app tự thử lại mỗi 15 giây', Lux.urgentText),
+      null => ('Đang kiểm tra máy in…', Lux.ivoryA(0.6)),
+    };
+    final parts = [
+      text,
+      if (seen != null) 'trả lời lúc ${two(seen.hour)}:${two(seen.minute)}:${two(seen.second)}',
+      if (q.waitingCount > 0) '${q.waitingCount} tấm đang chờ in',
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(Icons.circle, size: 12, color: color),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(parts.join(' · '), style: LuxFonts.sans(size: 15, color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _section(String title) => Padding(
     padding: const EdgeInsets.only(top: 28, bottom: 10),
     child: Text(title, style: LuxFonts.serif(size: 30)),
@@ -356,7 +389,7 @@ class _AdminScreenState extends State<AdminScreen> {
     final t = job.created;
     String two(int n) => n.toString().padLeft(2, '0');
     final (label, color) = switch (job.status) {
-      JobStatus.waiting => ('Đang chờ', Lux.ivoryA(0.6)),
+      JobStatus.waiting => ('Đang chờ${job.error == null ? '' : ': ${job.error}'}', Lux.ivoryA(0.6)),
       JobStatus.printing => ('Đang in', const Color(0xFF7BD389)),
       JobStatus.done => ('Đã in', const Color(0xFF7BD389)),
       JobStatus.failed => ('Lỗi${job.error == null ? '' : ': ${job.error}'}', Lux.urgentText),
