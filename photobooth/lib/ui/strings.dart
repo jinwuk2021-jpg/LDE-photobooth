@@ -43,8 +43,8 @@ abstract class Strings {
   String frameHint(int photos, String shape);
   String get portrait;
   String get landscape;
-  String get titleBand;
-  String get twoColumns;
+  String get ivoryPaper;
+  String get blackPaper;
 
   // Camera
   String get getReady;
@@ -105,9 +105,9 @@ class _Vi extends Strings {
   @override
   String get landscape => 'khổ ngang';
   @override
-  String get titleBand => 'dải tiêu đề';
+  String get ivoryPaper => 'nền ngà';
   @override
-  String get twoColumns => '2 cột';
+  String get blackPaper => 'nền đen';
   @override
   String get getReady => 'Chuẩn bị nhé!';
   @override
@@ -192,9 +192,9 @@ class _En extends Strings {
   @override
   String get landscape => 'landscape';
   @override
-  String get titleBand => 'title band';
+  String get ivoryPaper => 'ivory';
   @override
-  String get twoColumns => '2 columns';
+  String get blackPaper => 'black';
   @override
   String get getReady => 'Get ready!';
   @override
@@ -279,9 +279,9 @@ class _Ja extends Strings {
   @override
   String get landscape => 'よこ';
   @override
-  String get titleBand => 'タイトル帯';
+  String get ivoryPaper => 'アイボリー';
   @override
-  String get twoColumns => '2列';
+  String get blackPaper => 'ブラック';
   @override
   String get getReady => '準備はいい？';
   @override

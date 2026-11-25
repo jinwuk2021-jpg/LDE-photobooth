@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../booth/frames.dart';
 import '../booth/print_layout.dart';
 import '../services/settings.dart';
 import '../ui/lux.dart';
@@ -9,9 +10,16 @@ import '../ui/sparkle.dart';
 /// 2 · "Chọn khung ảnh": a glass card per frame with its print drawn small; tap one (it lifts,
 /// glows, gets a ✓, the others dim), then "Bắt đầu chụp".
 class LayoutScreen extends StatefulWidget {
-  const LayoutScreen({super.key, required this.settings, required this.onPick, required this.onBack});
+  const LayoutScreen({
+    super.key,
+    required this.settings,
+    required this.frames,
+    required this.onPick,
+    required this.onBack,
+  });
   final BoothSettings settings;
-  final ValueChanged<BoothLayout> onPick;
+  final FrameStore frames;
+  final ValueChanged<BoothFrame> onPick;
   final VoidCallback onBack;
 
   @override
@@ -19,7 +27,7 @@ class LayoutScreen extends StatefulWidget {
 }
 
 class _LayoutScreenState extends State<LayoutScreen> {
-  BoothLayout? _picked;
+  BoothFrame? _picked;
 
   @override
   Widget build(BuildContext context) {
@@ -43,25 +51,39 @@ class _LayoutScreenState extends State<LayoutScreen> {
               ],
             ),
           ),
+          // Every frame switched on in Settings; more than fit scroll sideways.
           Positioned(
             left: 0,
             right: 0,
-            top: 236,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (final layout in BoothLayout.values) ...[
-                  _FrameCard(
-                    layout: layout,
-                    settings: widget.settings,
-                    on: picked == layout,
-                    dim: picked != null && picked != layout,
-                    onTap: () => setState(() => _picked = layout),
+            top: 236 - 30,
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final frames = widget.frames.enabled;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  padding: const EdgeInsets.fromLTRB(48, 30, 48, 0),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: box.maxWidth - 96),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (final (i, frame) in frames.indexed) ...[
+                          if (i > 0) const SizedBox(width: 28),
+                          _FrameCard(
+                            frame: frame,
+                            settings: widget.settings,
+                            on: picked == frame,
+                            dim: picked != null && picked != frame,
+                            onTap: () => setState(() => _picked = frame),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  if (layout != BoothLayout.values.last) const SizedBox(width: 28),
-                ],
-              ],
+                );
+              },
             ),
           ),
           Positioned(
@@ -90,13 +112,13 @@ class _LayoutScreenState extends State<LayoutScreen> {
 
 class _FrameCard extends StatelessWidget {
   const _FrameCard({
-    required this.layout,
+    required this.frame,
     required this.settings,
     required this.on,
     required this.dim,
     required this.onTap,
   });
-  final BoothLayout layout;
+  final BoothFrame frame;
   final BoothSettings settings;
   final bool on;
   final bool dim;
@@ -105,7 +127,7 @@ class _FrameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // The print at 270 pt tall (landscape: 290 wide).
-    final preview = layout.landscape ? const Size(290, 196) : const Size(176, 260.5);
+    final preview = frame.landscape ? const Size(290, 196) : const Size(176, 260.5);
     const spring = Cubic(.34, 1.56, .64, 1);
     return GestureDetector(
       onTap: onTap,
@@ -158,7 +180,7 @@ class _FrameCard extends StatelessWidget {
                                 child: CustomPaint(
                                   painter: PrintPainter(
                                     PrintSpec(
-                                      layout: layout,
+                                      frame: frame,
                                       photos: const [],
                                       title: settings.title,
                                       dateLine: settings.dateLine,
@@ -173,17 +195,31 @@ class _FrameCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        Text(
-                          layout.label,
-                          style: LuxFonts.serif(
-                            size: 36,
-                            weight: FontWeight.w600,
-                            height: 1,
-                            color: on ? Lux.champagneLight : Lux.ivory,
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: preview.width),
+                          child: Text(
+                            frame.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: LuxFonts.serif(
+                              size: 36,
+                              weight: FontWeight.w600,
+                              height: 1,
+                              color: on ? Lux.champagneLight : Lux.ivory,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Text(_hint(layout), style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.68))),
+                        SizedBox(
+                          width: preview.width,
+                          child: Text(
+                            _hint(frame),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: LuxFonts.sans(size: 16, color: Lux.ivoryA(0.68)),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -218,12 +254,11 @@ class _FrameCard extends StatelessWidget {
   }
 }
 
-String _hint(BoothLayout layout) {
+/// "2 ảnh · nền ngà" for built-ins (the shape shows in the preview), "4 ảnh · khổ ngang" for custom frames.
+String _hint(BoothFrame frame) {
   final t = T.now;
-  return t.frameHint(layout.picks, switch (layout) {
-    BoothLayout.cut2 => t.portrait,
-    BoothLayout.cut3 => t.titleBand,
-    BoothLayout.cut4 => t.landscape,
-    BoothLayout.cut6 => t.twoColumns,
-  });
+  final what = frame.builtIn
+      ? (frame.dark ? t.blackPaper : t.ivoryPaper)
+      : (frame.landscape ? t.landscape : t.portrait);
+  return t.frameHint(frame.picks, what);
 }

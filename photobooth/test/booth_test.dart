@@ -3,16 +3,21 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:photobooth/booth/booth.dart';
+import 'package:photobooth/booth/frames.dart';
 import 'package:photobooth/booth/print_layout.dart';
 import 'package:photobooth/camera/photobooth_sequence.dart';
 import 'package:photobooth/services/upload_queue.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('6 shots: 5 s before the first, 3 s before each next', () {
     fakeAsync((async) {
       final ticks = <(int, int)>[];
@@ -36,8 +41,19 @@ void main() {
     });
   });
 
+  late FrameStore store;
+  late List<BoothFrame> frames;
+  BoothFrame byId(String id) => store.byId(id)!;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    store = FrameStore(await SharedPreferences.getInstance());
+    await store.load();
+    frames = store.all;
+  });
+
   test('picks keep tap order, as many as the frame has, tap again to remove', () {
-    final g = GuestSession(BoothLayout.cut4);
+    final g = GuestSession(byId('lpe_4cut_black'));
     for (final i in [5, 0, 3, 2, 1]) {
       g.toggle(i);
     }
@@ -46,7 +62,7 @@ void main() {
     g.toggle(0);
     expect(g.picks, [5, 3, 2]);
     expect(g.complete, isFalse);
-    final two = GuestSession(BoothLayout.cut2);
+    final two = GuestSession(byId('lpe_2cut_ivory'));
     for (final i in [4, 1, 3]) {
       two.toggle(i);
     }
@@ -54,19 +70,19 @@ void main() {
   });
 
   test('2 spare shots, at least 6', () {
-    expect({for (final l in BoothLayout.values) l.label: l.shots}, {'2 Cut': 6, '3 Cut': 6, '4 Cut': 6, '6 Cut': 8});
+    expect({for (final f in frames) f.label: f.shots}, {'2 Cut': 6, '3 Cut': 6, '4 Cut': 6, '6 Cut': 8});
   });
 
   test('layout.json: one window per photo, fractions of the card', () {
-    for (final layout in BoothLayout.values) {
-      final j = layoutJson(layout);
+    for (final frame in frames) {
+      final j = layoutJson(frame);
       final rects = j['rects']! as List;
-      expect(rects, hasLength(layout.picks));
+      expect(rects, hasLength(frame.picks));
       for (final r in rects.cast<List<double>>()) {
         expect(r.every((v) => v >= 0 && v <= 1), isTrue);
         expect(r[0] + r[2] <= 1 && r[1] + r[3] <= 1, isTrue);
       }
-      expect(j['aspect'], closeTo(layout.size.aspectRatio, 0.001));
+      expect(j['aspect'], closeTo(frame.size.aspectRatio, 0.001));
     }
   });
 
@@ -75,14 +91,97 @@ void main() {
     expect(id, matches(RegExp(r'^[abcdefghjkmnpqrstuvwxyz23456789]{12}$')));
   });
 
+  group('frames', () {
+    test('8 built-ins, ivory and black of each cut; the 4 of before are on by default', () {
+      expect(frames.map((f) => f.id), builtInFrameIds);
+      expect({for (final f in frames) '${f.picks}${f.paper.name}'}, hasLength(8));
+      expect(store.enabled.map((f) => f.id), ['lpe_2cut_ivory', 'lpe_3cut_ivory', 'lpe_4cut_black', 'lpe_6cut_ivory']);
+      expect(frames.where((f) => f.landscape).map((f) => f.picks).toSet(), {4});
+    });
+
+    test('frame.json round-trips', () {
+      for (final f in frames) {
+        final again = BoothFrame.fromJson(
+          jsonDecode(jsonEncode(f.toJson(enabled: f.enabledByDefault))) as Map<String, dynamic>,
+        );
+        expect(again.toJson(enabled: again.enabledByDefault), f.toJson(enabled: f.enabledByDefault));
+      }
+    });
+
+    test('show / hide, remembered, the last one stays on', () async {
+      final prefs = await SharedPreferences.getInstance();
+      expect(await store.setEnabled(byId('lpe_2cut_black'), true), isTrue);
+      for (final id in ['lpe_2cut_ivory', 'lpe_3cut_ivory', 'lpe_4cut_black', 'lpe_6cut_ivory']) {
+        expect(await store.setEnabled(byId(id), false), isTrue);
+      }
+      expect(store.enabled.map((f) => f.id), ['lpe_2cut_black']);
+      expect(await store.setEnabled(byId('lpe_2cut_black'), false), isFalse);
+      expect(store.enabled.map((f) => f.id), ['lpe_2cut_black']);
+      final again = FrameStore(prefs);
+      await again.load();
+      expect(again.enabled.map((f) => f.id), ['lpe_2cut_black']);
+    });
+
+    test('custom frames load from Documents/frames with their PNG', () async {
+      final docs = Directory.systemTemp.createTempSync('frames');
+      addTearDown(() => docs.deleteSync(recursive: true));
+      final dir = Directory('${docs.path}/frames/my_frame')..createSync(recursive: true);
+      final png = await _holePng(const Size(1200, 1776), [const Rect.fromLTWH(100, 100, 1000, 700)]);
+      File('${dir.path}/frame.png').writeAsBytesSync(png);
+      File('${dir.path}/frame.json').writeAsStringSync(
+        jsonEncode({
+          'id': 'my_frame',
+          'name': 'Khung công ty',
+          'orientation': 'portrait',
+          'size': [1200, 1776],
+          'slots': [
+            {'x': 100, 'y': 100, 'w': 1000, 'h': 700},
+          ],
+          'qr': {'x': 948, 'y': 1544, 'size': 180},
+          'enabled': true,
+          'builtIn': false,
+        }),
+      );
+      Directory('${docs.path}/frames/broken').createSync();
+      final s = FrameStore(await SharedPreferences.getInstance(), docs: docs);
+      await s.load();
+      final mine = s.byId('my_frame')!;
+      expect(mine.builtIn, isFalse);
+      expect(mine.label, 'Khung công ty');
+      expect((mine.overlay!.width, mine.overlay!.height), (1200, 1776));
+      expect(s.all, hasLength(9));
+    });
+  });
+
   group('print layout', () {
-    for (final layout in BoothLayout.values) {
-      test('${layout.label}: windows, title and QR fit the card and never overlap', () {
-        final card = Offset.zero & layout.size;
-        final g = PrintGeometry.of(layout);
-        expect(g.cells, hasLength(layout.picks));
+    // The handoff's frame.json geometry (= the design's coordinates).
+    const want = {
+      2: [Rect.fromLTWH(72, 72, 1056, 704), Rect.fromLTWH(72, 800, 1056, 704)],
+      3: [Rect.fromLTWH(300, 87, 828, 518), Rect.fromLTWH(300, 629, 828, 518), Rect.fromLTWH(300, 1171, 828, 518)],
+      4: [
+        Rect.fromLTWH(116, 56, 760, 428),
+        Rect.fromLTWH(900, 56, 760, 428),
+        Rect.fromLTWH(116, 508, 760, 428),
+        Rect.fromLTWH(900, 508, 760, 428),
+      ],
+      6: [
+        Rect.fromLTWH(72, 72, 516, 459),
+        Rect.fromLTWH(612, 72, 516, 459),
+        Rect.fromLTWH(72, 555, 516, 459),
+        Rect.fromLTWH(612, 555, 516, 459),
+        Rect.fromLTWH(72, 1038, 516, 459),
+        Rect.fromLTWH(612, 1038, 516, 459),
+      ],
+    };
+
+    for (final id in builtInFrameIds) {
+      test('$id: windows, title and QR fit the card and never overlap', () {
+        final frame = byId(id);
+        final card = Offset.zero & frame.size;
+        expect(frame.slots, want[frame.picks]);
+        final decor = builtInDecor(frame);
         // 3 Cut's title is turned inside its band; the others sit under the photos.
-        final boxes = [...g.cells, g.qr, if (g.band == null) g.title];
+        final boxes = [...frame.slots, frame.qr, if (decor.band == null) decor.title];
         for (final r in boxes) {
           expect(card.contains(r.topLeft) && card.contains(r.bottomRight - const Offset(1, 1)), isTrue, reason: '$r');
         }
@@ -93,26 +192,35 @@ void main() {
           }
         }
         // QR: 180 px (15 mm), at least 40 px (3.3 mm) from every edge.
-        expect((g.qr.width, g.qr.height), (180.0, 180.0));
-        expect(g.qr.left >= 40 && g.qr.top >= 40 && card.right - g.qr.right >= 40 && card.bottom - g.qr.bottom >= 40, isTrue, reason: '${g.qr}');
+        expect((frame.qr.width, frame.qr.height), (180.0, 180.0));
+        expect(
+          frame.qr.left >= 40 &&
+              frame.qr.top >= 40 &&
+              card.right - frame.qr.right >= 40 &&
+              card.bottom - frame.qr.bottom >= 40,
+          isTrue,
+          reason: '${frame.qr}',
+        );
         // Each card holds the same postcard, landscape or not.
-        expect({layout.size.width, layout.size.height}, {1200.0, 1776.0});
+        expect({frame.size.width, frame.size.height}, {1200.0, 1776.0});
       });
     }
 
-    test('printer copy: always portrait (either turn), brightened when asked', () async {
-      Future<ui.Image> solid(int w, int h, Color c) {
-        final rec = ui.PictureRecorder();
-        Canvas(rec).drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = c);
-        return rec.endRecording().toImage(w, h);
-      }
+    test('cover crop: fills the window, centred across, biased 10 % up', () {
+      // A 3:2 photo into a square: the sides go.
+      expect(coverSource(const Size(300, 200), const Size(100, 100)), const Rect.fromLTWH(50, 0, 200, 200));
+      // A tall photo into a wide window: 40 % of the spare height above, 60 % below.
+      final r = coverSource(const Size(200, 400), const Size(200, 100));
+      expect(r, const Rect.fromLTWH(0, 120, 200, 100));
+    });
 
-      final landscape = await solid(40, 20, const Color(0xFF808080));
+    test('printer copy: always portrait (either turn), brightened when asked', () async {
+      final landscape = await _solid(40, 20, const Color(0xFF808080));
       for (final ccw in [false, true]) {
         final out = await forPrinter(landscape, counterClockwise: ccw);
         expect((out.width, out.height), (20, 40));
       }
-      final portrait = await solid(20, 40, const Color(0xFF808080));
+      final portrait = await _solid(20, 40, const Color(0xFF808080));
       final same = await forPrinter(portrait);
       expect((same.width, same.height), (20, 40));
       Future<int> red(ui.Image img) async => (await img.toByteData())!.getUint8(0);
@@ -120,26 +228,53 @@ void main() {
       expect(await red(lifted), greaterThan(await red(same)));
     });
 
-    test('renders every frame; 4 Cut is turned portrait for the printer', () async {
+    test('renders every frame with photos in the windows; landscape is turned portrait for the printer', () async {
       final out = Platform.environment['PRINT_OUT'];
-      for (final layout in BoothLayout.values) {
+      final red = await _solid(600, 400, const Color(0xFFFF0000));
+      for (final frame in frames) {
         final img = await renderPrint(
           PrintSpec(
-            layout: layout,
-            photos: const [],
-            title: 'Tiệc cuối năm',
+            frame: frame,
+            photos: List.filled(frame.picks, red),
+            title: 'LPE Sum Up',
             dateLine: '23.11.2026',
             qrUrl: 'https://lenslycam.com/lde/b/abcdefghjkmn',
           ),
         );
-        expect((img.width, img.height), (layout.size.width.round(), layout.size.height.round()));
-        final printed = layout.landscape ? await forPrinter(img) : img;
+        expect((img.width, img.height), (frame.size.width.round(), frame.size.height.round()));
+        for (final s in frame.slots) {
+          expect(await _pixel(img, s.center), 0xFFFF0000, reason: '${frame.id} $s');
+        }
+        // QR: white quiet zone in the corner of its square.
+        expect(await _pixel(img, frame.qr.topLeft + const Offset(3, 3)), 0xFFFFFFFF, reason: frame.id);
+        final printed = frame.landscape ? await forPrinter(img) : img;
         expect((printed.width, printed.height), (1200, 1776));
         if (out != null) {
           final png = await img.toByteData(format: ui.ImageByteFormat.png);
-          File('$out/print_${layout.name}.png').writeAsBytesSync(png!.buffer.asUint8List());
+          File('$out/print_${frame.id}.png').writeAsBytesSync(png!.buffer.asUint8List());
         }
       }
+    });
+
+    test('custom frame: photo shows through the hole only, the PNG covers the rest', () async {
+      const size = Size(1200, 1776);
+      const hole = Rect.fromLTWH(100, 100, 1000, 700);
+      final overlay = await decodePng(await _holePng(size, [hole]));
+      final frame = BoothFrame(
+        id: 'x',
+        name: 'x',
+        size: size,
+        slots: const [hole],
+        qr: const Rect.fromLTWH(948, 1544, 180, 180),
+        overlay: overlay,
+      );
+      final img = await renderPrint(
+        PrintSpec(frame: frame, photos: [await _solid(300, 200, const Color(0xFFFF0000))], title: '', dateLine: ''),
+      );
+      expect(await _pixel(img, hole.center), 0xFFFF0000);
+      expect(await _pixel(img, hole.topLeft + const Offset(1, 1)), 0xFFFF0000);
+      expect(await _pixel(img, hole.topLeft - const Offset(1, 1)), _near(0xFF2040A0));
+      expect(await _pixel(img, const Offset(600, 1200)), _near(0xFF2040A0));
     });
   });
 
@@ -203,4 +338,35 @@ void main() {
       expect(q.items, isEmpty);
     });
   });
+}
+
+Future<ui.Image> _solid(int w, int h, Color c) {
+  final rec = ui.PictureRecorder();
+  Canvas(rec).drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = c);
+  return rec.endRecording().toImage(w, h);
+}
+
+/// Within 2 per channel of [argb] (PNG colour round trips).
+Matcher _near(int argb) => predicate<int>(
+  (v) => [0, 8, 16, 24].every((s) => ((v >> s & 0xFF) - (argb >> s & 0xFF)).abs() <= 2),
+  'near 0x${argb.toRadixString(16)}',
+);
+
+/// ARGB of [img] at [at].
+Future<int> _pixel(ui.Image img, Offset at) async {
+  final data = (await img.toByteData())!;
+  final i = (at.dy.floor() * img.width + at.dx.floor()) * 4;
+  return data.getUint8(i + 3) << 24 | data.getUint8(i) << 16 | data.getUint8(i + 1) << 8 | data.getUint8(i + 2);
+}
+
+/// A blue PNG of [size] with fully transparent [holes].
+Future<Uint8List> _holePng(Size size, List<Rect> holes) async {
+  final rec = ui.PictureRecorder();
+  final c = Canvas(rec);
+  c.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF2040A0));
+  for (final h in holes) {
+    c.drawRect(h, Paint()..blendMode = BlendMode.clear);
+  }
+  final img = await rec.endRecording().toImage(size.width.round(), size.height.round());
+  return (await img.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List();
 }

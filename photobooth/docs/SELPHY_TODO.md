@@ -23,7 +23,7 @@ không cần build lại app.
 
 ## 2. Cài đặt trong app
 
-Mở admin: chạm 5 lần vào góc trên bên phải màn chờ, nhập PIN `1234`.
+Mở admin: giữ ngón tay ở góc trên bên phải màn chờ 3 giây.
 
 - [ ] Kiểm tra **In ảnh cho khách** đang bật (bật sẵn)
 - [ ] **Chọn máy in** → chọn SELPHY
@@ -32,7 +32,7 @@ Mở admin: chạm 5 lần vào góc trên bên phải màn chờ, nhập PIN `1
 
 ## 3. In thử từng khung (ghi lại kết quả)
 
-Bấm lần lượt **In thử 2 Cut**, **3 Cut**, **4 Cut**, **6 Cut** trong admin.
+Bấm lần lượt nút **In thử …** của từng khung đang bật trong admin (mặc định 2 Cut Ngà, 3 Cut Ngà, 4 Cut Đen, 6 Cut Ngà).
 
 | Kiểm tra | 2 Cut | 3 Cut | 4 Cut | 6 Cut |
 |---|---|---|---|---|

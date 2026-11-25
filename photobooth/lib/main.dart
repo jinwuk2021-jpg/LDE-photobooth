@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'booth/booth.dart';
-import 'booth/print_layout.dart';
+import 'booth/frames.dart';
 import 'camera/booth_camera.dart';
 import 'config.dart';
 import 'screens/idle_screen.dart';
@@ -32,12 +32,16 @@ Future<void> main() async {
   final docs = await getApplicationDocumentsDirectory();
   final support = await getApplicationSupportDirectory();
   final settings = BoothSettings(prefs);
+  // The 8 built-in frames (assets/frames) and any imported in Settings (Documents/frames).
+  final frames = FrameStore(prefs, docs: docs);
+  await frames.load();
   final booth = Booth(
     docs: docs,
     settings: settings,
     camera: BoothCamera(),
     uploads: UploadQueue(docs: docs, stateFile: File(p.join(support.path, 'upload_queue.json')))..load(),
     prints: PrintQueue(prefs, settings, docs)..load(),
+    frames: frames,
   );
   // Playfair Display + Be Vietnam Pro (fetched once, then cached by google_fonts).
   await LuxFonts.warmUp();
@@ -127,15 +131,15 @@ class _HomeState extends State<Home> {
     _go(Stage.idle);
   }
 
-  void _startShooting(BoothLayout layout) {
-    _guest = GuestSession(layout);
+  void _startShooting(BoothFrame frame) {
+    _guest = GuestSession(frame);
     _go(Stage.shoot);
   }
 
   void _retake() {
-    final layout = _guest!.layout;
+    final frame = _guest!.frame;
     booth.discard(_guest!);
-    _startShooting(layout);
+    _startShooting(frame);
   }
 
   @override
@@ -150,7 +154,12 @@ class _HomeState extends State<Home> {
         ),
       ),
       Stage.idle => IdleScreen(booth: booth, onStart: () => _go(Stage.layout)),
-      Stage.layout => LayoutScreen(settings: booth.settings, onPick: _startShooting, onBack: _reset),
+      Stage.layout => LayoutScreen(
+        settings: booth.settings,
+        frames: booth.frames,
+        onPick: _startShooting,
+        onBack: _reset,
+      ),
       Stage.shoot => ShootScreen(
         key: ObjectKey(_guest),
         booth: booth,

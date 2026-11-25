@@ -4,7 +4,7 @@ App photobooth cho một sự kiện, chạy trên iPad Pro 11" (M4), xoay ngang
 Dùng lại từ Lensly: camera và clip Live (`packages/film_camera`, live recorder, ring buffer), chuỗi chụp tự động,
 6 filter, làm mịn da, bảng màu và font, cùng máy chủ chia sẻ (Worker `lenslycam.com`, trang `/b/<id>`).
 
-Luồng: màn chờ → chọn khung (8 Cut, 2 Cut, 3 Cut, 4 Cut, 6 Cut như menu) → chụp (số ô + 2 tấm, ít nhất 6) → chọn ảnh và filter trong thời gian giới hạn (mặc định 60 giây, chỉnh trong admin; hết giờ tự chọn đủ và in) → In → màn cảm ơn có QR. QR chỉ được tạo khi bấm In và in ở vị trí cố định của từng khung. 4 Cut là khổ ngang, khi in được xoay sẵn cho vừa giấy dọc.
+Luồng: màn chờ → chọn khung (các khung đang bật trong admin) → chụp (số ô + 2 tấm, ít nhất 6) → chọn ảnh và filter trong thời gian giới hạn (mặc định 45 giây, chỉnh trong admin; hết giờ tự chọn đủ và in) → In → màn cảm ơn có QR. QR chỉ được tạo khi bấm In và in ở vị trí cố định của từng khung. 4 Cut là khổ ngang, khi in được xoay sẵn cho vừa giấy dọc.
 
 ## Build (chỉ cài lên iPad của mình, không lên App Store)
 
@@ -32,7 +32,12 @@ Nếu dùng Apple ID miễn phí, app hết hạn sau 7 ngày. Nhớ cài lại 
 Ảnh của mỗi lượt khách nằm trong app Tệp → Trên iPad → Photobooth → `Booth/<ngày>/<giờ>/`
 (`print.jpg`, `1–4.jpg`, `1–4.mp4`, `link.txt`), nên không mất ảnh khi upload lỗi.
 
-Màn admin: chạm 5 lần vào góc trên bên phải màn chờ, nhập PIN `1234`.
+Màn admin: giữ ngón tay ở góc trên bên phải màn chờ 3 giây (không có PIN, không có gì hiện ra ở góc đó).
+
+Khung in: 8 khung có sẵn (2 / 3 / 4 / 6 Cut, mỗi loại nền ngà và nền đen). Vị trí ô ảnh và QR nằm trong
+`assets/frames/<id>/frame.json` (lấy từ gói thiết kế); phần trang trí, tiêu đề, dòng ngày và dòng "Quét mã…" vẽ bằng code
+nên luôn theo nội dung nhập trong admin và ngôn ngữ khách chọn. Mặc định bật 2 Cut ngà, 3 Cut ngà, 4 Cut đen, 6 Cut ngà;
+bật / tắt trong admin → **Khung ảnh** (luôn còn ít nhất 1 khung).
 
 ## Checklist trước sự kiện
 

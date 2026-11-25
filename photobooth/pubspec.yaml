@@ -34,3 +34,12 @@ flutter:
   # Playfair Display + Be Vietnam Pro (OFL), bundled so google_fonts never needs the network.
   assets:
     - google_fonts/
+    # The 8 built-in print frames (frame.json per frame; drawn in code, see lib/booth/print_layout.dart).
+    - assets/frames/lpe_2cut_ivory/
+    - assets/frames/lpe_2cut_black/
+    - assets/frames/lpe_3cut_ivory/
+    - assets/frames/lpe_3cut_black/
+    - assets/frames/lpe_4cut_black/
+    - assets/frames/lpe_4cut_ivory/
+    - assets/frames/lpe_6cut_ivory/
+    - assets/frames/lpe_6cut_black/

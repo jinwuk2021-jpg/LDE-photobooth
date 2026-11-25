@@ -14,24 +14,25 @@ import '../services/printer.dart';
 import '../services/settings.dart';
 import '../services/upload_queue.dart';
 import '../ui/strings.dart';
+import 'frames.dart';
 import 'print_layout.dart';
 
 /// One guest, from picking a frame to pressing "In".
 class GuestSession extends ChangeNotifier {
-  GuestSession(this.layout);
+  GuestSession(this.frame);
 
-  final BoothLayout layout;
+  final BoothFrame frame;
   final List<Shot> shots = [];
 
   /// Shot indexes in tap order = order on the print.
   final List<int> picks = [];
 
-  bool get complete => picks.length == layout.picks;
+  bool get complete => picks.length == frame.picks;
 
   void toggle(int index) {
     if (picks.contains(index)) {
       picks.remove(index);
-    } else if (picks.length < layout.picks) {
+    } else if (picks.length < frame.picks) {
       picks.add(index);
     }
     notifyListeners();
@@ -67,6 +68,7 @@ class Booth {
     required this.camera,
     required this.uploads,
     required this.prints,
+    required this.frames,
   });
 
   final Directory docs;
@@ -74,6 +76,7 @@ class Booth {
   final BoothCamera camera;
   final UploadQueue uploads;
   final PrintQueue prints;
+  final FrameStore frames;
 
   static const _idAlphabet = 'abcdefghjkmnpqrstuvwxyz23456789'; // same ids as the Worker (no 0/o, 1/l/i)
 
@@ -130,7 +133,7 @@ class Booth {
     final photos = [for (final i in guest.picks) developed[i]];
     final printImage = await renderPrint(
       PrintSpec(
-        layout: guest.layout,
+        frame: guest.frame,
         photos: photos,
         title: title,
         dateLine: settings.dateLine,
@@ -146,7 +149,7 @@ class Booth {
     // Where each photo sits on the print, so the page plays the clips in their windows.
     final layoutPath = p.join(dir.path, 'layout.json');
     File(layoutPath).writeAsStringSync(
-      jsonEncode(layoutJson(guest.layout, title: title, subtitle: settings.subtitle, date: settings.dateLine)),
+      jsonEncode(layoutJson(guest.frame, title: title, subtitle: settings.subtitle, date: settings.dateLine)),
     );
     uploads.add(id, 'layout.json', layoutPath, title);
     _toPhotos(printPath);
@@ -156,7 +159,7 @@ class Booth {
       uploads.add(id, '${k + 1}.jpg', path, title);
     }
     unawaited(_clips(guest, filter, id, dir, title));
-    return Finished(url, printPath, guest.layout.size.aspectRatio, printed: settings.printing);
+    return Finished(url, printPath, guest.frame.size.aspectRatio, printed: settings.printing);
   }
 
   Future<void> _clips(GuestSession guest, BoothFilter filter, String id, Directory dir, String title) async {
@@ -203,8 +206,8 @@ class Booth {
 
 /// layout.json for the Worker: the card's width / height, each photo window as
 /// [x, y, w, h] fractions of the card, and the event text for the guest page's header.
-Map<String, Object> layoutJson(BoothLayout layout, {String title = '', String subtitle = '', String date = ''}) {
-  final size = layout.size;
+Map<String, Object> layoutJson(BoothFrame frame, {String title = '', String subtitle = '', String date = ''}) {
+  final size = frame.size;
   double f(double v) => double.parse(v.toStringAsFixed(4));
   return {
     'title': title,
@@ -212,7 +215,7 @@ Map<String, Object> layoutJson(BoothLayout layout, {String title = '', String su
     'date': date,
     'aspect': f(size.aspectRatio),
     'rects': [
-      for (final r in PrintGeometry.of(layout).cells)
+      for (final r in frame.slots)
         [f(r.left / size.width), f(r.top / size.height), f(r.width / size.width), f(r.height / size.height)],
     ],
   };

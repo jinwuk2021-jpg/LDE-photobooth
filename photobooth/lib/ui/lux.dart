@@ -3,21 +3,24 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../design/lpe_tokens.dart';
+
 // LPE Sum Up design (Claude Design export, "Style guide" + "Animation & thông số in"):
 // deep night background, champagne metal gold, ivory text, glass panels.
+// Colours come from lib/design/lpe_tokens.dart (the handoff's single source of truth).
 
 abstract final class Lux {
-  static const night = Color(0xFF0B0B12);
-  static const navy = Color(0xFF141A33);
-  static const champagne = Color(0xFFD4AF6A);
-  static const champagneLight = Color(0xFFF5E1A4);
-  static const goldDeep = Color(0xFF9C7A3F);
+  static const night = LpeColors.night;
+  static const navy = LpeColors.navy;
+  static const champagne = LpeColors.champagne;
+  static const champagneLight = LpeColors.champagneLight;
+  static const goldDeep = LpeColors.goldDeep;
   static const goldInk = Color(0xFF1A1408);
-  static const ivory = Color(0xFFF8F3E8);
-  static const rose = Color(0xFFE9C7C0);
-  static const urgent = Color(0xFFE0525A);
-  static const urgentText = Color(0xFFFFB3B7);
-  static const amber = Color(0xFFE8B04A);
+  static const ivory = LpeColors.ivory;
+  static const rose = LpeColors.rose;
+  static const urgent = LpeColors.urgent;
+  static const urgentText = LpeColors.urgentText;
+  static const amber = LpeColors.amber;
   static const flash = Color(0xFFFFFDF7);
 
   static Color ivoryA(double a) => ivory.withValues(alpha: a);

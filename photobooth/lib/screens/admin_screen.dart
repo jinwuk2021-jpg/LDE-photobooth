@@ -5,39 +5,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 
 import '../booth/booth.dart';
+import '../booth/frames.dart';
 import '../booth/print_layout.dart';
 import '../camera/skin_smooth.dart';
 import '../config.dart';
 import '../services/printer.dart';
 import '../ui/lux.dart';
 
-/// Asks for the PIN, then opens the admin screen.
-Future<void> openAdmin(BuildContext context, Booth booth) async {
-  final pin = TextEditingController();
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Nhân viên', style: LuxFonts.serif(size: 30)),
-      content: TextField(
-        controller: pin,
-        autofocus: true,
-        obscureText: true,
-        keyboardType: TextInputType.number,
-        style: LuxFonts.serif(size: 30),
-        decoration: const InputDecoration(hintText: 'Mã PIN'),
-        onSubmitted: (v) => Navigator.pop(context, v == ADMIN_PIN),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Huỷ')),
-        TextButton(onPressed: () => Navigator.pop(context, pin.text == ADMIN_PIN), child: const Text('Mở')),
-      ],
-    ),
-  );
-  pin.dispose();
-  if (ok == true && context.mounted) {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AdminScreen(booth: booth)));
-  }
-}
+/// Opens the staff screen (reached by holding the start screen's top-right corner 3 s; no PIN).
+Future<void> openAdmin(BuildContext context, Booth booth) =>
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AdminScreen(booth: booth)));
 
 /// Hidden staff screen: printer, event text, skin smoothing, uploads.
 class AdminScreen extends StatefulWidget {
@@ -71,13 +48,12 @@ class _AdminScreenState extends State<AdminScreen> {
     if (picked != null) await widget.booth.settings.setPrinter(picked.$1, picked.$2);
   }
 
-  /// A print with numbered windows and a QR, to check size and borders.
-  /// A [layout] card with numbered windows and a QR, sent exactly like a guest's (4 Cut turned).
-  Future<void> _testPrint(BoothLayout layout) async {
+  /// A [frame] card with numbered windows and a QR, sent exactly like a guest's (landscape turned).
+  Future<void> _testPrint(BoothFrame frame) async {
     final b = widget.booth;
     final card = await renderPrint(
       PrintSpec(
-        layout: layout,
+        frame: frame,
         photos: const [],
         title: _title.text.isEmpty ? 'In thử' : _title.text,
         dateLine: _date.text,
@@ -88,7 +64,7 @@ class _AdminScreenState extends State<AdminScreen> {
     final dir = Directory(p.join(b.docs.path, 'Booth', 'in-thu'))..createSync(recursive: true);
     final path = await b.printerCopy(
       card,
-      p.join(dir.path, 'in-thu-${layout.name}-${DateTime.now().millisecondsSinceEpoch}.jpg'),
+      p.join(dir.path, 'in-thu-${frame.id}-${DateTime.now().millisecondsSinceEpoch}.jpg'),
     );
     card.dispose();
     b.prints.add(path);
@@ -112,7 +88,7 @@ class _AdminScreenState extends State<AdminScreen> {
         title: Text('Quản lý photobooth', style: LuxFonts.serif(size: 30)),
       ),
       body: ListenableBuilder(
-        listenable: Listenable.merge([b.settings, b.prints, b.uploads]),
+        listenable: Listenable.merge([b.settings, b.prints, b.uploads, b.frames]),
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(28),
           children: [
@@ -156,11 +132,11 @@ class _AdminScreenState extends State<AdminScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  for (final l in BoothLayout.values)
+                  for (final f in b.frames.enabled)
                     OutlinedButton.icon(
-                      onPressed: b.settings.printerUrl == null ? null : () => _testPrint(l),
+                      onPressed: b.settings.printerUrl == null ? null : () => _testPrint(f),
                       icon: const Icon(Icons.description_outlined),
-                      label: Text('In thử ${l.label}'),
+                      label: Text('In thử ${f.name}'),
                     ),
                 ],
               ),
@@ -289,13 +265,37 @@ class _AdminScreenState extends State<AdminScreen> {
                 Text('Thời gian chọn ảnh: ', style: LuxFonts.sans(size: 18)),
                 SegmentedButton<int>(
                   segments: [
-                    for (final s in const [30, 60, 90, 120]) ButtonSegment(value: s, label: Text('${s}s')),
+                    for (final s in const [30, 45, 60, 90]) ButtonSegment(value: s, label: Text('${s}s')),
                   ],
                   selected: {b.settings.pickSeconds},
                   onSelectionChanged: (v) => b.settings.pickSeconds = v.first,
                 ),
               ],
             ),
+
+            _section('Khung ảnh'),
+            Text(
+              'Khách chỉ thấy các khung đang bật (ít nhất 1 khung).',
+              style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
+            ),
+            const SizedBox(height: 6),
+            for (final f in b.frames.all)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(f.name, style: LuxFonts.sans(size: 18)),
+                subtitle: Text(
+                  '${f.picks} ảnh · ${f.landscape ? 'khổ ngang' : 'khổ dọc'}${f.builtIn ? '' : ' · khung riêng'}',
+                  style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.7)),
+                ),
+                value: b.frames.isEnabled(f),
+                onChanged: (v) async {
+                  final ok = await b.frames.setEnabled(f, v);
+                  if (!ok && mounted) {
+                    ScaffoldMessenger.of(this.context)
+                        .showSnackBar(const SnackBar(content: Text('Phải bật ít nhất 1 khung')));
+                  }
+                },
+              ),
 
             _section('Upload'),
             Text(

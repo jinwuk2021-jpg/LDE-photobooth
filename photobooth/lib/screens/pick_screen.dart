@@ -179,7 +179,7 @@ class _PickScreenState extends State<PickScreen> {
 
   Widget _left(GuestSession guest) {
     final images = _images;
-    final need = guest.layout.picks;
+    final need = guest.frame.picks;
     final cols = guest.shots.length > 6 ? 4 : 3;
     final tileH = cols == 4 ? 118.0 : 162.0;
     return Column(
@@ -266,8 +266,8 @@ class _PickScreenState extends State<PickScreen> {
   Widget _right(GuestSession guest) {
     final images = _images;
     final s = widget.booth.settings;
-    final need = guest.layout.picks;
-    final aspect = guest.layout.size.aspectRatio;
+    final need = guest.frame.picks;
+    final aspect = guest.frame.size.aspectRatio;
     // The print fitted into 362 × 300.
     final previewW = aspect >= 362 / 300 ? 362.0 : 300 * aspect;
     return Glass(
@@ -310,7 +310,7 @@ class _PickScreenState extends State<PickScreen> {
                       child: CustomPaint(
                         painter: PrintPainter(
                           PrintSpec(
-                            layout: guest.layout,
+                            frame: guest.frame,
                             photos: [
                               for (var k = 0; k < need; k++)
                                 k < guest.picks.length && images != null ? images[guest.picks[k]] : null,
@@ -332,7 +332,7 @@ class _PickScreenState extends State<PickScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(T.now.frameName(guest.layout.label), style: LuxFonts.serif(size: 24, weight: FontWeight.w600)),
+              Text(T.now.frameName(guest.frame.label), style: LuxFonts.serif(size: 24, weight: FontWeight.w600)),
               GoldText(
                 T.now.filterNames[_filter.name] ?? _filter.label,
                 style: LuxFonts.serif(size: 24, weight: FontWeight.w600),

@@ -4,107 +4,26 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:qr/qr.dart';
 
-import '../config.dart';
 import '../ui/lux.dart';
+import 'frames.dart';
 
 /// 100×148 mm postcard as the printer gets it: portrait, ~300 dpi (1 mm ≈ 12 px).
 const Size kPrintSize = Size(1200, 1776);
 
-/// The frames (LPE Sum Up design, "Tấm in · postcard 100 × 148 mm"). 4 Cut is drawn
-/// landscape and turned for the printer.
-enum BoothLayout {
-  /// 2 photos stacked, ivory.
-  cut2('2 Cut', 2, '2 ảnh · khổ dọc'),
+/// Where a built-in frame's title block goes (and 3 Cut's navy band), in card pixels.
+/// Custom frames carry their own text in the PNG.
+({Rect title, Rect? band}) builtInDecor(BoothFrame frame) => switch (frame.picks) {
+  // A 1380 × 220 box centred in the band at (130, 790), turned −90°.
+  3 => (title: const Rect.fromLTWH(130 - 690, 790 - 110, 1380, 220), band: const Rect.fromLTWH(0, 0, 260, 1776)),
+  4 => (title: const Rect.fromLTWH(116, 962, 1300, 200), band: null),
+  _ => (title: const Rect.fromLTWH(72, 1532, 830, 200), band: null),
+};
 
-  /// 3 photos, navy band with the title on the left.
-  cut3('3 Cut', 3, '3 ảnh · dải tiêu đề'),
-
-  /// 2×2, landscape, black.
-  cut4('4 Cut', 4, '4 ảnh · khổ ngang'),
-
-  /// 2 columns × 3 rows, ivory.
-  cut6('6 Cut', 6, '6 ảnh · 2 cột');
-
-  const BoothLayout(this.label, this.picks, this.hint);
-  final String label;
-
-  /// Photos the guest picks.
-  final int picks;
-
-  /// Under the name on the frame picker.
-  final String hint;
-
-  /// Shots taken: always 2 spare to choose from, at least [SHOTS].
-  int get shots => math.max(SHOTS, picks + 2);
-
-  bool get landscape => this == cut4;
-
-  /// Black card with light-gold ink (the others are ivory with dark-gold ink).
-  bool get dark => this == cut4;
-
-  /// The card as designed (and as shown on the download page).
-  Size get size => landscape ? Size(kPrintSize.height, kPrintSize.width) : kPrintSize;
-
-  /// Width / height of one photo window.
-  double get cellAspect => PrintGeometry.of(this).cells.first.size.aspectRatio;
-}
-
-/// Photo windows, the QR square and where the title block goes, in [BoothLayout.size] pixels.
-class PrintGeometry {
-  const PrintGeometry._({required this.cells, required this.qr, required this.title, this.band});
-
-  final List<Rect> cells;
-  final Rect qr;
-
-  /// Title block (3 Cut: centred in the band, turned −90°).
-  final Rect title;
-
-  /// 3 Cut's navy band.
-  final Rect? band;
-
-  factory PrintGeometry.of(BoothLayout layout) => switch (layout) {
-    BoothLayout.cut2 => const PrintGeometry._(
-      cells: [Rect.fromLTWH(72, 72, 1056, 704), Rect.fromLTWH(72, 800, 1056, 704)],
-      qr: Rect.fromLTWH(948, 1544, 180, 180),
-      title: Rect.fromLTWH(72, 1532, 830, 200),
-    ),
-    BoothLayout.cut3 => const PrintGeometry._(
-      cells: [Rect.fromLTWH(300, 87, 828, 518), Rect.fromLTWH(300, 629, 828, 518), Rect.fromLTWH(300, 1171, 828, 518)],
-      qr: Rect.fromLTWH(40, 1544, 180, 180),
-      // A 1380 × 220 box centred at (130, 790), turned.
-      title: Rect.fromLTWH(130 - 690, 790 - 110, 1380, 220),
-      band: Rect.fromLTWH(0, 0, 260, 1776),
-    ),
-    BoothLayout.cut4 => const PrintGeometry._(
-      cells: [
-        Rect.fromLTWH(116, 56, 760, 428),
-        Rect.fromLTWH(900, 56, 760, 428),
-        Rect.fromLTWH(116, 508, 760, 428),
-        Rect.fromLTWH(900, 508, 760, 428),
-      ],
-      qr: Rect.fromLTWH(1480, 968, 180, 180),
-      title: Rect.fromLTWH(116, 962, 1300, 200),
-    ),
-    BoothLayout.cut6 => const PrintGeometry._(
-      cells: [
-        Rect.fromLTWH(72, 72, 516, 459),
-        Rect.fromLTWH(612, 72, 516, 459),
-        Rect.fromLTWH(72, 555, 516, 459),
-        Rect.fromLTWH(612, 555, 516, 459),
-        Rect.fromLTWH(72, 1038, 516, 459),
-        Rect.fromLTWH(612, 1038, 516, 459),
-      ],
-      qr: Rect.fromLTWH(948, 1544, 180, 180),
-      title: Rect.fromLTWH(72, 1532, 830, 200),
-    ),
-  };
-}
-
-/// Everything on one card. [photos] in print order ([BoothLayout.picks] of them); null draws an
+/// Everything on one card. [photos] in print order ([BoothFrame.picks] of them); null draws an
 /// empty numbered window.
 class PrintSpec {
   const PrintSpec({
-    required this.layout,
+    required this.frame,
     required this.photos,
     required this.title,
     required this.dateLine,
@@ -114,7 +33,7 @@ class PrintSpec {
     this.scanHint = 'Quét mã để tải ảnh & video Live →',
   });
 
-  final BoothLayout layout;
+  final BoothFrame frame;
   final List<ui.Image?> photos;
 
   /// "LPE Sum Up": the first word bold, the rest italic.
@@ -131,14 +50,14 @@ class PrintSpec {
   final String scanHint;
 }
 
-/// Paints a card at any size (scaled from [BoothLayout.size]).
+/// Paints a card at any size (scaled from [BoothFrame.size]).
 class PrintPainter extends CustomPainter {
   PrintPainter(this.spec);
   final PrintSpec spec;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final full = spec.layout.size;
+    final full = spec.frame.size;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.scale(size.width / full.width, size.height / full.height);
@@ -148,7 +67,7 @@ class PrintPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(PrintPainter old) =>
-      old.spec.layout != spec.layout ||
+      !identical(old.spec.frame, spec.frame) ||
       old.spec.title != spec.title ||
       old.spec.dateLine != spec.dateLine ||
       old.spec.subtitle != spec.subtitle ||
@@ -166,11 +85,11 @@ class PrintPainter extends CustomPainter {
   }
 }
 
-/// The card as an image of [BoothLayout.size] (what is uploaded and shown on the thank-you screen).
+/// The card as an image of [BoothFrame.size] (what is uploaded and shown on the thank-you screen).
 Future<ui.Image> renderPrint(PrintSpec spec) {
   final rec = ui.PictureRecorder();
   paintPrint(Canvas(rec), spec);
-  final s = spec.layout.size;
+  final s = spec.frame.size;
   return rec.endRecording().toImage(s.width.round(), s.height.round());
 }
 
@@ -210,18 +129,19 @@ const _darkFrame = Color(0xFFD4AF6A);
 const _ivoryInk = Color(0xFF3B3326);
 
 void paintPrint(Canvas canvas, PrintSpec spec) {
-  final layout = spec.layout;
-  final size = layout.size;
-  final geo = PrintGeometry.of(layout);
+  final frame = spec.frame;
+  if (frame.overlay != null) return _paintCustom(canvas, spec, frame.overlay!);
+  final size = frame.size;
+  final decor = builtInDecor(frame);
   final card = Offset.zero & size;
-  final frame = layout.dark ? _darkFrame : _ivoryFrame;
-  final ink = layout.dark ? Lux.ivory : _ivoryInk;
+  final gold = frame.dark ? _darkFrame : _ivoryFrame;
+  final ink = frame.dark ? Lux.ivory : _ivoryInk;
 
   // Paper: ivory, or night with a navy glow from the top.
   canvas.drawRect(
     card,
     Paint()
-      ..shader = layout.dark
+      ..shader = frame.dark
           ? const RadialGradient(
               center: Alignment(0, -1),
               radius: 1.2,
@@ -234,7 +154,7 @@ void paintPrint(Canvas canvas, PrintSpec spec) {
               colors: [Color(0xFFFBF7EE), Color(0xFFF8F3E8), Color(0xFFF1E8D6)],
             ).createShader(card),
   );
-  final band = geo.band;
+  final band = decor.band;
   if (band != null) {
     canvas.drawRect(
       band,
@@ -258,42 +178,70 @@ void paintPrint(Canvas canvas, PrintSpec spec) {
     Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
-      ..color = frame.withValues(alpha: 0.55),
+      ..color = gold.withValues(alpha: 0.55),
   );
-  _corners(canvas, size, frame);
+  _corners(canvas, size, gold);
 
   // Photos, each with a 2 px gold outline 5 px out.
-  for (var i = 0; i < geo.cells.length; i++) {
-    final cell = geo.cells[i];
+  for (var i = 0; i < frame.slots.length; i++) {
+    final cell = frame.slots[i];
     canvas.drawRect(
       cell.inflate(6),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = frame,
+        ..color = gold,
     );
-    canvas.drawRect(cell, Paint()..color = const Color(0xFF17141C));
-    final img = spec.photos.length > i ? spec.photos[i] : null;
-    if (img == null) {
-      _text(
-        canvas,
-        '${i + 1}',
-        cell,
-        LuxFonts.serif(size: 120, weight: FontWeight.w700, color: frame.withValues(alpha: 0.5)),
-        center: true,
-      );
-    } else {
-      _cover(canvas, img, cell);
-    }
+    _photo(canvas, spec, i, gold);
   }
 
-  _titleBlock(canvas, spec, geo.title, ink, rotated: band != null, onDark: layout.dark || band != null);
+  _titleBlock(canvas, spec, decor.title, ink, rotated: band != null, onDark: frame.dark || band != null);
+  _qr(canvas, spec, gold);
+}
 
+/// A custom frame: photos into the windows, the PNG over them (its holes let them through), then the QR.
+void _paintCustom(Canvas canvas, PrintSpec spec, ui.Image overlay) {
+  final frame = spec.frame;
+  final card = Offset.zero & frame.size;
+  canvas.drawRect(card, Paint()..color = const Color(0xFFFFFFFF));
+  for (var i = 0; i < frame.slots.length; i++) {
+    // 2 px under the PNG all round, so anti-aliased hole edges never show paper.
+    _photo(canvas, spec, i, Lux.champagne, bleed: 2);
+  }
+  canvas.drawImageRect(
+    overlay,
+    Rect.fromLTWH(0, 0, overlay.width.toDouble(), overlay.height.toDouble()),
+    card,
+    Paint()..filterQuality = FilterQuality.high,
+  );
+  _qr(canvas, spec, Lux.champagne);
+}
+
+/// Window [i]: the photo (cover-cropped), or an empty numbered window on previews.
+void _photo(Canvas canvas, PrintSpec spec, int i, Color gold, {double bleed = 0}) {
+  final cell = spec.frame.slots[i].inflate(bleed);
+  canvas.drawRect(cell, Paint()..color = const Color(0xFF17141C));
+  final img = spec.photos.length > i ? spec.photos[i] : null;
+  if (img == null) {
+    _text(
+      canvas,
+      '${i + 1}',
+      cell,
+      LuxFonts.serif(size: 120, weight: FontWeight.w700, color: gold.withValues(alpha: 0.5)),
+      center: true,
+    );
+  } else {
+    coverRect(canvas, img, cell);
+  }
+}
+
+void _qr(Canvas canvas, PrintSpec spec, Color gold) {
+  final qr = spec.frame.qr;
   if (spec.qrUrl != null) {
-    paintQr(canvas, spec.qrUrl!, geo.qr);
+    paintQr(canvas, spec.qrUrl!, qr);
   } else if (spec.qrSlot) {
-    canvas.drawRect(geo.qr, Paint()..color = const Color(0xFFFFFFFF));
-    _text(canvas, 'QR', geo.qr, LuxFonts.sans(size: 40, weight: FontWeight.w600, color: frame), center: true);
+    canvas.drawRect(qr, Paint()..color = const Color(0xFFFFFFFF));
+    _text(canvas, 'QR', qr, LuxFonts.sans(size: 40, weight: FontWeight.w600, color: gold), center: true);
   }
 }
 
@@ -302,7 +250,7 @@ void _titleBlock(Canvas canvas, PrintSpec spec, Rect box, Color ink, {required b
   final words = spec.title.trim().split(RegExp(r'\s+'));
   final head = words.first;
   final tail = words.length > 1 ? ' ${words.skip(1).join(' ')}' : '';
-  final big = rotated ? 128.0 : (spec.layout.landscape ? 84.0 : 96.0);
+  final big = rotated ? 128.0 : (spec.frame.landscape ? 84.0 : 96.0);
   final line2 = '${spec.dateLine} · ${spec.subtitle}'.toUpperCase();
 
   canvas.save();
@@ -433,12 +381,18 @@ void _corners(Canvas canvas, Size size, Color color) {
   }
 }
 
-/// [img] fills [rect], centre-cropped.
-void _cover(Canvas canvas, ui.Image img, Rect rect) {
-  final scale = math.max(rect.width / img.width, rect.height / img.height);
-  final sw = rect.width / scale, sh = rect.height / scale;
-  final src = Rect.fromLTWH((img.width - sw) / 2, (img.height - sh) / 2, sw, sh);
+/// [img] fills [rect]: centred across, and 10 % above centre down the height (faces sit high).
+void coverRect(Canvas canvas, ui.Image img, Rect rect) {
+  final src = coverSource(Size(img.width.toDouble(), img.height.toDouble()), rect.size);
   canvas.drawImageRect(img, src, rect, Paint()..filterQuality = FilterQuality.high);
+}
+
+/// The part of an [image]-sized photo that fills a [box]-shaped window: as large as fits,
+/// centred across, and with the spare height split 40 / 60 (biased up 10 %).
+Rect coverSource(Size image, Size box) {
+  final scale = math.max(box.width / image.width, box.height / image.height);
+  final sw = box.width / scale, sh = box.height / scale;
+  return Rect.fromLTWH((image.width - sw) / 2, (image.height - sh) * 0.4, sw, sh);
 }
 
 void _text(Canvas canvas, String text, Rect box, TextStyle style, {bool center = false}) {

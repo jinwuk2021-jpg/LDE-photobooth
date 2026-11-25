@@ -1,0 +1,31 @@
+{
+  "id": "lpe_2cut_black",
+  "name": "2 Cut Đen",
+  "orientation": "portrait",
+  "size": [
+    1200,
+    1776
+  ],
+  "slots": [
+    {
+      "x": 72,
+      "y": 72,
+      "w": 1056,
+      "h": 704
+    },
+    {
+      "x": 72,
+      "y": 800,
+      "w": 1056,
+      "h": 704
+    }
+  ],
+  "qr": {
+    "x": 948,
+    "y": 1544,
+    "size": 180
+  },
+  "enabled": false,
+  "builtIn": true,
+  "paper": "black"
+}

@@ -8,7 +8,7 @@ const String SHARE_API_URL = String.fromEnvironment('SHARE_API_URL', defaultValu
 /// The Worker's BOOTH_KEY secret. Empty = nothing is uploaded (files stay in the queue).
 const String BOOTH_KEY = String.fromEnvironment('BOOTH_KEY');
 
-/// Least shots per guest (a frame with more windows gets 2 spare: BoothLayout.shots).
+/// Least shots per guest (a frame with more windows gets 2 spare: BoothFrame.shots).
 const int SHOTS = 6;
 
 /// Countdown seconds before the first shot and before each next one.
@@ -26,7 +26,8 @@ const Duration IDLE_TIMEOUT = Duration(seconds: 60);
 /// The thank-you screen goes back to the start screen after this.
 const Duration THANKS_TIMEOUT = Duration(seconds: 25);
 
-const String ADMIN_PIN = '1234';
+/// Holding the start screen's top-right corner this long opens the staff screen.
+const Duration ADMIN_HOLD = Duration(seconds: 3);
 
 /// Album in the iPad's Photos app that every print (with its QR) is copied into.
 const String PHOTOS_ALBUM = 'Photobooth';

@@ -1,0 +1,37 @@
+{
+  "id": "lpe_3cut_black",
+  "name": "3 Cut Đen",
+  "orientation": "portrait",
+  "size": [
+    1200,
+    1776
+  ],
+  "slots": [
+    {
+      "x": 300,
+      "y": 87,
+      "w": 828,
+      "h": 518
+    },
+    {
+      "x": 300,
+      "y": 629,
+      "w": 828,
+      "h": 518
+    },
+    {
+      "x": 300,
+      "y": 1171,
+      "w": 828,
+      "h": 518
+    }
+  ],
+  "qr": {
+    "x": 40,
+    "y": 1544,
+    "size": 180
+  },
+  "enabled": false,
+  "builtIn": true,
+  "paper": "black"
+}

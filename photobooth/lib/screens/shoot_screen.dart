@@ -34,7 +34,7 @@ class ShootScreen extends StatefulWidget {
 
 class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin {
   late final PhotoboothSequence _sequence;
-  late BoothState _state = BoothState(total: widget.guest.layout.shots);
+  late BoothState _state = BoothState(total: widget.guest.frame.shots);
 
   /// White flash: 40 ms up, 120 ms held, 260 ms down.
   late final AnimationController _flash = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
@@ -51,7 +51,7 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
   void initState() {
     super.initState();
     _sequence = PhotoboothSequence(
-      shots: widget.guest.layout.shots,
+      shots: widget.guest.frame.shots,
       capture: _capture,
       onChange: (s) {
         if (!mounted) return;
@@ -85,7 +85,7 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
     try {
       final b = widget.booth;
       widget.guest.shots.add(
-        await b.camera.capture(index, cellAspect: widget.guest.layout.cellAspect, skin: b.settings.skin),
+        await b.camera.capture(index, cellAspect: widget.guest.frame.cellAspect, skin: b.settings.skin),
       );
     } finally {
       if (mounted) _burst.forward(from: 0);

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../booth/booth.dart';
+import '../config.dart';
 import '../ui/lux.dart';
 import '../ui/strings.dart';
 import '../ui/sparkle.dart';
@@ -12,7 +13,7 @@ import 'admin_screen.dart';
 
 /// 1 · Start screen: the event poster (picked in admin, or the designed LPE Sum Up poster)
 /// in a breathing column, its blur behind, MAX glitter, "Chạm để bắt đầu" with halos.
-/// Hidden admin: 5 taps in the top-right corner, then the PIN.
+/// Hidden admin: hold the top-right corner (120 × 120, nothing visible) for 3 s.
 class IdleScreen extends StatefulWidget {
   const IdleScreen({super.key, required this.booth, required this.onStart});
   final Booth booth;
@@ -23,8 +24,7 @@ class IdleScreen extends StatefulWidget {
 }
 
 class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
-  int _cornerTaps = 0;
-  DateTime _firstTap = DateTime(0);
+  Timer? _hold;
   Timer? _check;
   late final AnimationController _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 10))
     ..repeat(reverse: true);
@@ -41,21 +41,23 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _check?.cancel();
+    _hold?.cancel();
     _breathe.dispose();
     _halo.dispose();
     super.dispose();
   }
 
-  void _corner() {
-    final now = DateTime.now();
-    if (now.difference(_firstTap) > const Duration(seconds: 3)) {
-      _firstTap = now;
-      _cornerTaps = 0;
-    }
-    if (++_cornerTaps >= 5) {
-      _cornerTaps = 0;
-      openAdmin(context, widget.booth);
-    }
+  void _holdStart() {
+    _hold?.cancel();
+    _hold = Timer(ADMIN_HOLD, () {
+      _hold = null;
+      if (mounted) openAdmin(context, widget.booth);
+    });
+  }
+
+  void _holdEnd() {
+    _hold?.cancel();
+    _hold = null;
   }
 
   @override
@@ -182,9 +184,16 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
                       Positioned(
                         right: 0,
                         top: 0,
-                        width: 110,
-                        height: 110,
-                        child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: _corner),
+                        width: 120,
+                        height: 120,
+                        // Swallows taps (no guest start from here); a 3 s hold opens admin.
+                        child: Listener(
+                          behavior: HitTestBehavior.opaque,
+                          onPointerDown: (_) => _holdStart(),
+                          onPointerUp: (_) => _holdEnd(),
+                          onPointerCancel: (_) => _holdEnd(),
+                          child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () {}),
+                        ),
                       ),
                     ],
                   );

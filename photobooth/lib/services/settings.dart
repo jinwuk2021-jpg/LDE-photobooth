@@ -29,7 +29,7 @@ class BoothSettings extends ChangeNotifier {
   }
 
   /// Seconds a guest has to pick the photos before the booth picks and prints.
-  int get pickSeconds => _prefs.getInt('pickSeconds') ?? 60;
+  int get pickSeconds => _prefs.getInt('pickSeconds') ?? 45;
   set pickSeconds(int v) {
     _prefs.setInt('pickSeconds', v);
     notifyListeners();
