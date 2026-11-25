@@ -55,3 +55,17 @@ bật / tắt trong admin → **Khung ảnh** (luôn còn ít nhất 1 khung).
 flutter test                                             # app
 cd ~/Vintage-Came/server/share-worker && npm test        # Worker
 ```
+
+Test trên iPad thật (camera, Live clip, filter trên GPU, ghép 8 khung, upload lên Worker, hàng đợi in khi máy in tắt).
+Qua Wi‑Fi `flutter test` không kết nối được, nên build bản chạy test rồi đọc log trong app:
+
+```sh
+flutter build ios --release -t integration_test/device_test.dart --dart-define-from-file=booth_defines.json
+xcrun devicectl device install app --device <iPad> build/ios/iphoneos/Runner.app
+xcrun devicectl device process launch --device <iPad> --terminate-existing com.lde.photobooth
+# ~2 phút sau, khi log có dòng DONE:
+xcrun devicectl device copy from --device <iPad> --domain-type appDataContainer \
+  --domain-identifier com.lde.photobooth --source Documents/device_test.log --destination .
+```
+
+Xong nhớ cài lại app thật (`flutter build ios --release --dart-define-from-file=booth_defines.json` rồi `install` như trên).

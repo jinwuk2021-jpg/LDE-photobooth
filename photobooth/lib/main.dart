@@ -27,7 +27,14 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   // No status bar, home indicator hidden (the screen also never locks: AppDelegate).
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  final booth = await createBooth();
+  // Playfair Display + Be Vietnam Pro (fetched once, then cached by google_fonts).
+  await LuxFonts.warmUp();
+  runApp(BoothApp(booth: booth));
+}
 
+/// The booth's services, as the app runs them (also used by integration_test/).
+Future<Booth> createBooth() async {
   final prefs = await SharedPreferences.getInstance();
   final docs = await getApplicationDocumentsDirectory();
   final support = await getApplicationSupportDirectory();
@@ -35,7 +42,7 @@ Future<void> main() async {
   // The 8 built-in frames (assets/frames) and any imported in Settings (Documents/frames).
   final frames = FrameStore(prefs, docs: docs);
   await frames.load();
-  final booth = Booth(
+  return Booth(
     docs: docs,
     settings: settings,
     camera: BoothCamera(),
@@ -46,9 +53,6 @@ Future<void> main() async {
       ..start(),
     frames: frames,
   );
-  // Playfair Display + Be Vietnam Pro (fetched once, then cached by google_fonts).
-  await LuxFonts.warmUp();
-  runApp(BoothApp(booth: booth));
 }
 
 class BoothApp extends StatelessWidget {
