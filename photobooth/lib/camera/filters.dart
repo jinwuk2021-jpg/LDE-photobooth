@@ -145,13 +145,24 @@ enum BoothFilter {
   final String label;
   final FilmRecipe recipe;
 
-  /// Grain / vignette / halation for the native clip export.
-  FilmLook get look =>
-      FilmLook(grain: recipe.grain, grainSize: recipe.grainSize, vignette: recipe.vignette, halation: recipe.halation);
+  /// Grain / vignette / halation / light leak for the native clip export. [seed]: the one the
+  /// still was developed with ([seedFor]), so the leak lands on the same edge.
+  FilmLook look({double seed = 0}) => FilmLook(
+    grain: recipe.grain,
+    grainSize: recipe.grainSize,
+    vignette: recipe.vignette,
+    halation: recipe.halation,
+    leak: recipe.leak,
+    seed: seed,
+  );
 }
 
 /// Default LUT resolution. 17 is plenty for these soft curves.
 const int kLutSize = 17;
+
+/// LUT resolution for the clip export (Core Image's colour cube): a power of two, which every
+/// iOS version takes. A cube it refuses leaves the clip in plain camera colours.
+const int kClipLutSize = 32;
 
 double _smooth(double x) => x * x * (3 - 2 * x);
 

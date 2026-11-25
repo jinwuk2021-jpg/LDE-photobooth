@@ -129,17 +129,31 @@ class LutData {
 /// Film texture applied on top of the LUT when exporting video — the same
 /// knobs the still/preview shader uses.
 class FilmLook {
-  const FilmLook({this.grain = 0, this.grainSize = 1.5, this.vignette = 0, this.halation = 0});
+  const FilmLook({
+    this.grain = 0,
+    this.grainSize = 1.5,
+    this.vignette = 0,
+    this.halation = 0,
+    this.leak = 0,
+    this.seed = 0,
+  });
   final double grain;
   final double grainSize;
   final double vignette;
   final double halation;
+
+  /// Warm light leak from one edge, as in shaders/film.frag (0..1); [seed] picks the edge
+  /// exactly like the still's shader, so a clip and its photo match.
+  final double leak;
+  final double seed;
 
   Map<String, double> toMap() => {
         'grain': grain,
         'grainSize': grainSize,
         'vignette': vignette,
         'halation': halation,
+        'leak': leak,
+        'seed': seed,
       };
 }
 

@@ -73,6 +73,9 @@ enum ClipExporter {
     let lut = lutFilter(args: args)
     let look = FilmLook(args: args)
     let lock = NSLock()
+    // Set once the cube fails (frames are rendered off the main thread; guarded by [lock]).
+    final class Flag { var on = false }
+    let lutFailed = Flag()
     // Output: short side 480 px.
     let natural = AVMutableVideoComposition(propertiesOf: comp).renderSize
     let shortSide = min(natural.width, natural.height)
@@ -83,9 +86,16 @@ enum ClipExporter {
       lock.lock()
       if let f = lut {
         f.setValue(img, forKey: kCIInputImageKey)
-        img = f.outputImage ?? img
+        if let out = f.outputImage {
+          img = out
+        } else if !lutFailed.on {
+          // The clip goes out in plain camera colours: say so once instead of failing silently.
+          lutFailed.on = true
+          NSLog("film_camera: colour cube gave no output, clip exported without the filter")
+        }
       }
       lock.unlock()
+      img = look.leakWash(img, extent: extent, mirrored: mirror)
       img = look.finish(img, extent: extent, time: request.compositionTime.seconds)
       if mirror {
         img = img.transformed(by: CGAffineTransform(scaleX: -1, y: 1).translatedBy(x: -extent.width, y: 0))

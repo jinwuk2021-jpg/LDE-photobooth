@@ -127,10 +127,17 @@ class BoothCamera {
     );
   }
 
-  /// The shot's Live clip through [filter], mirrored like the photo. Null when it failed.
-  Future<String?> exportClip(Shot shot, BoothFilter filter, String outPath) {
+  /// The shot's Live clip through [filter], mirrored like the photo. [seedId]: the one its
+  /// photo was developed with ([develop]). Null when it failed.
+  Future<String?> exportClip(Shot shot, BoothFilter filter, String outPath, {required String seedId}) {
     if (shot.clip.isEmpty) return Future.value(null);
-    return live.export([shot.clip], buildLut(filter), filter.look, outPath, mirror: true);
+    return live.export(
+      [shot.clip],
+      buildLut(filter, size: kClipLutSize),
+      filter.look(seed: seedFor(seedId)),
+      outPath,
+      mirror: true,
+    );
   }
 
   /// Frees the shots' clip segments and raw files.

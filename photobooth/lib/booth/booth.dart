@@ -165,7 +165,8 @@ class Booth {
   Future<void> _clips(GuestSession guest, BoothFilter filter, String id, Directory dir, String title) async {
     try {
       for (final (k, i) in guest.picks.indexed) {
-        final out = await camera.exportClip(guest.shots[i], filter, p.join(dir.path, '${k + 1}.mp4'));
+        // Seed '$i' as in [developAll]: the clip's light leak sits where its photo's does.
+        final out = await camera.exportClip(guest.shots[i], filter, p.join(dir.path, '${k + 1}.mp4'), seedId: '$i');
         if (out != null) uploads.add(id, '${k + 1}.mp4', out, title);
       }
     } finally {
