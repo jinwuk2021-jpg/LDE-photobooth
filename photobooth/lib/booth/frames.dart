@@ -135,13 +135,18 @@ class FrameStore extends ChangeNotifier {
 
   static const _enabledKey = 'framesEnabled';
 
+  /// Built-ins never change while the app runs: read once.
+  List<BoothFrame>? _builtIns;
+
   Future<void> load({AssetBundle? bundle}) async {
     final assets = bundle ?? rootBundle;
     final frames = <BoothFrame>[
-      for (final id in builtInFrameIds)
-        BoothFrame.fromJson(
-          jsonDecode(await assets.loadString('assets/frames/$id/frame.json')) as Map<String, dynamic>,
-        ),
+      ...(_builtIns ??= [
+        for (final id in builtInFrameIds)
+          BoothFrame.fromJson(
+            jsonDecode(await assets.loadString('assets/frames/$id/frame.json')) as Map<String, dynamic>,
+          ),
+      ]),
     ];
     frames.addAll(await _loadCustom());
     _all = frames;
@@ -207,6 +212,42 @@ class FrameStore extends ChangeNotifier {
     ]);
     notifyListeners();
     return true;
+  }
+
+  /// A custom frame's PNG (`frames/<id>/frame.png`), null for built-ins.
+  File? pngOf(BoothFrame f) => f.builtIn || customRoot == null ? null : File(p.join(customRoot!.path, f.id, 'frame.png'));
+
+  /// Saves a custom frame (a new one when [id] is null), reloads, shows it to guests. Returns it.
+  Future<BoothFrame> saveCustom({
+    String? id,
+    required String name,
+    required Uint8List png,
+    required Size card,
+    required List<Rect> slots,
+    required Rect qr,
+  }) async {
+    final root = customRoot;
+    if (root == null) throw StateError('no documents folder');
+    final newId = id ?? 'custom_${DateTime.now().millisecondsSinceEpoch}';
+    final dir = Directory(p.join(root.path, newId))..createSync(recursive: true);
+    final frame = BoothFrame(id: newId, name: name, size: card, slots: slots, qr: qr);
+    await File(p.join(dir.path, 'frame.png')).writeAsBytes(png, flush: true);
+    await File(p.join(dir.path, 'frame.json')).writeAsString(
+      const JsonEncoder.withIndent('  ').convert(frame.toJson()),
+      flush: true,
+    );
+    await load();
+    final saved = byId(newId)!;
+    await setEnabled(saved, true);
+    return saved;
+  }
+
+  /// Deletes a custom frame's folder (built-ins cannot be deleted).
+  Future<void> deleteCustom(BoothFrame f) async {
+    if (f.builtIn || customRoot == null) return;
+    final dir = Directory(p.join(customRoot!.path, f.id));
+    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    await load();
   }
 
   BoothFrame? byId(String id) {

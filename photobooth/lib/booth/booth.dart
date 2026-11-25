@@ -143,7 +143,12 @@ class Booth {
       ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);
-    if (settings.printing) prints.add(await printerCopy(printImage, p.join(dir.path, 'print_may_in.jpg')));
+    if (settings.printing) {
+      final copy = await printerCopy(printImage, p.join(dir.path, 'print_may_in.jpg'));
+      for (var i = 0; i < settings.printCopies; i++) {
+        prints.add(copy);
+      }
+    }
     printImage.dispose();
     uploads.add(id, 'print.jpg', printPath, title);
     // Where each photo sits on the print, so the page plays the clips in their windows.

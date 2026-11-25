@@ -13,7 +13,7 @@ import 'admin_screen.dart';
 
 /// 1 · Start screen: the event poster (picked in admin, or the designed LPE Sum Up poster)
 /// in a breathing column, its blur behind, MAX glitter, "Chạm để bắt đầu" with halos.
-/// Hidden admin: hold the top-right corner (120 × 120, nothing visible) for 3 s.
+/// Admin: hold the gear at the top right for 3 s (a ring fills); a tap only shows the hint.
 class IdleScreen extends StatefulWidget {
   const IdleScreen({super.key, required this.booth, required this.onStart});
   final Booth booth;
@@ -24,7 +24,18 @@ class IdleScreen extends StatefulWidget {
 }
 
 class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
-  Timer? _hold;
+  /// Fills while the staff holds the gear; opens admin when full.
+  late final AnimationController _hold = AnimationController(vsync: this, duration: ADMIN_HOLD)
+    ..addStatusListener((s) {
+      if (s == AnimationStatus.completed) {
+        _hold.value = 0;
+        if (mounted) openAdmin(context, widget.booth);
+      }
+    });
+
+  /// "Giữ để mở cài đặt" after a plain tap on the gear.
+  bool _hint = false;
+  Timer? _hintTimer;
   late final AnimationController _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 10))
     ..repeat(reverse: true);
   late final AnimationController _halo = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
@@ -39,23 +50,26 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _hold?.cancel();
+    _hold.dispose();
+    _hintTimer?.cancel();
     _breathe.dispose();
     _halo.dispose();
     super.dispose();
   }
 
-  void _holdStart() {
-    _hold?.cancel();
-    _hold = Timer(ADMIN_HOLD, () {
-      _hold = null;
-      if (mounted) openAdmin(context, widget.booth);
-    });
-  }
+  void _holdStart() => _hold.forward(from: 0);
 
   void _holdEnd() {
-    _hold?.cancel();
-    _hold = null;
+    if (_hold.isAnimating) _hold.value = 0;
+    _hold.stop();
+  }
+
+  void _showHint() {
+    setState(() => _hint = true);
+    _hintTimer?.cancel();
+    _hintTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _hint = false);
+    });
   }
 
   @override
@@ -178,19 +192,66 @@ class _IdleScreenState extends State<IdleScreen> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
-                      // Hidden admin corner.
+                      // Staff gear: hold 3 s (a ring fills) to open admin. Kept off the very top
+                      // edge, where iPadOS holds touches back for Control Center.
                       Positioned(
-                        right: 0,
-                        top: 0,
-                        width: 120,
-                        height: 120,
-                        // Swallows taps (no guest start from here); a 3 s hold opens admin.
-                        child: Listener(
-                          behavior: HitTestBehavior.opaque,
-                          onPointerDown: (_) => _holdStart(),
-                          onPointerUp: (_) => _holdEnd(),
-                          onPointerCancel: (_) => _holdEnd(),
-                          child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () {}),
+                        right: 28,
+                        top: 26,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Listener(
+                              behavior: HitTestBehavior.opaque,
+                              onPointerDown: (_) => _holdStart(),
+                              onPointerUp: (_) => _holdEnd(),
+                              onPointerCancel: (_) => _holdEnd(),
+                              // Swallows the tap (no guest start from here).
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: _showHint,
+                                child: SizedBox(
+                                  width: 64,
+                                  height: 64,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Glass(
+                                        radius: 999,
+                                        width: 56,
+                                        height: 56,
+                                        child: Icon(Icons.settings, size: 28, color: Lux.ivoryA(0.6)),
+                                      ),
+                                      AnimatedBuilder(
+                                        animation: _hold,
+                                        builder: (context, _) => _hold.value == 0
+                                            ? const SizedBox.shrink()
+                                            : SizedBox(
+                                                width: 62,
+                                                height: 62,
+                                                child: CircularProgressIndicator(
+                                                  value: _hold.value,
+                                                  strokeWidth: 3,
+                                                  color: Lux.champagne,
+                                                ),
+                                              ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            AnimatedOpacity(
+                              opacity: _hint ? 1 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Giữ 3 giây để mở cài đặt',
+                                  style: LuxFonts.sans(size: 14, color: Lux.ivoryA(0.75)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -409,7 +470,8 @@ class _ArchPainter extends CustomPainter {
   bool shouldRepaint(_ArchPainter old) => false;
 }
 
-/// For the staff: uploads waiting (amber), plus the printer when printing is on.
+/// For the staff: uploads waiting (amber), plus the printer when printing is on, plus the
+/// Sony camera when it is switched on in admin.
 class _StaffChip extends StatelessWidget {
   const _StaffChip({required this.booth});
   final Booth booth;
@@ -417,7 +479,7 @@ class _StaffChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([booth.prints, booth.uploads, booth.settings]),
+      listenable: Listenable.merge([booth.prints, booth.uploads, booth.settings, booth.camera.sony]),
       builder: (context, _) {
         final pending = booth.uploads.pendingSessions;
         final failing = booth.uploads.failingSessions;
@@ -446,6 +508,15 @@ class _StaffChip extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   printerOk == true ? 'máy in ok' : 'máy in?',
+                  style: LuxFonts.sans(size: 15, weight: FontWeight.w500),
+                ),
+              ],
+              if (booth.settings.externalCamera) ...[
+                const SizedBox(width: 14),
+                dot(booth.camera.sony.ready ? const Color(0xFF7BD389) : Lux.urgent, Icons.camera_alt),
+                const SizedBox(width: 8),
+                Text(
+                  booth.camera.sony.ready ? 'máy ảnh ok' : 'máy ảnh?',
                   style: LuxFonts.sans(size: 15, weight: FontWeight.w500),
                 ),
               ],

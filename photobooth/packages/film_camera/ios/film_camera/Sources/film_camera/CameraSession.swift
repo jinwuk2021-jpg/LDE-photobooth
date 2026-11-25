@@ -1,4 +1,6 @@
 import AVFoundation
+import CoreImage
+import ImageIO
 import Flutter
 import UIKit
 
@@ -171,6 +173,12 @@ final class CameraSession: NSObject, FlutterTexture, AVCaptureVideoDataOutputSam
   }
 
   private func configure(front: Bool) throws {
+    // iPad front cameras: Center Stage follows faces with a digital zoom (a softer, cropped picture).
+    // The app takes control and keeps it off; the booth frames the guests itself.
+    if front, #available(iOS 14.5, *) {
+      AVCaptureDevice.centerStageControlMode = .app
+      AVCaptureDevice.isCenterStageEnabled = false
+    }
     session.beginConfiguration()
     defer { session.commitConfiguration() }
     session.sessionPreset = .high
@@ -199,7 +207,15 @@ final class CameraSession: NSObject, FlutterTexture, AVCaptureVideoDataOutputSam
     }
     if !session.outputs.contains(photoOutput), session.canAddOutput(photoOutput) {
       session.addOutput(photoOutput)
-      photoOutput.maxPhotoQualityPrioritization = .speed
+    }
+    // Stills at the format's biggest size (2304 × 1296 on the iPad Pro M4 front camera, not 1920 × 1080), with iOS's
+    // multi-frame noise reduction ("balanced"): the photobooth's front camera looked soft before.
+    photoOutput.maxPhotoQualityPrioritization = .balanced
+    if #available(iOS 16.0, *) {
+      let sizes = device.activeFormat.supportedMaxPhotoDimensions
+      if let biggest = sizes.max(by: { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }) {
+        photoOutput.maxPhotoDimensions = biggest
+      }
     }
 
     orientConnections()
@@ -335,11 +351,31 @@ final class CameraSession: NSObject, FlutterTexture, AVCaptureVideoDataOutputSam
 
   // MARK: stills
 
+  private static let ciContext = CIContext(options: [.cacheIntermediates: false])
+
+  /// A light unsharp mask (front camera only): eyes, hair and clothes crisper. Skin smoothing runs
+  /// after this in Dart, so faces stay soft. Nil when Core Image fails (the plain JPEG is used).
+  private static func sharpened(_ image: UIImage, quality: CGFloat) -> Data? {
+    guard let ci = CIImage(image: image), let filter = CIFilter(name: "CIUnsharpMask") else { return nil }
+    filter.setValue(ci, forKey: kCIInputImageKey)
+    filter.setValue(1.6, forKey: kCIInputRadiusKey)
+    filter.setValue(0.55, forKey: kCIInputIntensityKey)
+    guard let out = filter.outputImage?.cropped(to: ci.extent),
+      let space = CGColorSpace(name: CGColorSpace.sRGB)
+    else { return nil }
+    return ciContext.jpegRepresentation(
+      of: out, colorSpace: space,
+      options: [CIImageRepresentationOption(rawValue: kCGImageDestinationLossyCompressionQuality as String): quality])
+  }
+
+
   func takePicture(outPath: String, flash: Bool, completion: @escaping (Result<[String: Any], Error>) -> Void) {
     let shutterUs = nowUs()
     let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
     if flash, photoOutput.supportedFlashModes.contains(.on) { settings.flashMode = .on }
-    settings.photoQualityPrioritization = .speed
+    settings.photoQualityPrioritization = .balanced
+    if #available(iOS 16.0, *) { settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions }
+    let sharpen = front
     let id = settings.uniqueID
     let delegate = PhotoDelegate { [weak self] data, error in
       self?.photoDelegates[id] = nil
@@ -360,7 +396,9 @@ final class CameraSession: NSObject, FlutterTexture, AVCaptureVideoDataOutputSam
           img.draw(in: CGRect(origin: .zero, size: size))
         }
         do {
-          try upright.jpegData(compressionQuality: 0.95)!.write(to: URL(fileURLWithPath: outPath))
+          let jpeg = (sharpen ? Self.sharpened(upright, quality: 0.95) : nil)
+            ?? upright.jpegData(compressionQuality: 0.95)!
+          try jpeg.write(to: URL(fileURLWithPath: outPath))
           DispatchQueue.main.async {
             completion(.success([
               "path": outPath, "width": Int(size.width), "height": Int(size.height), "shutterUs": shutterUs,

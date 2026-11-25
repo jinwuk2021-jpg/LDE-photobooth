@@ -4,6 +4,8 @@ App photobooth cho một sự kiện, chạy trên iPad Pro 11" (M4), xoay ngang
 Dùng lại từ Lensly: camera và clip Live (`packages/film_camera`, live recorder, ring buffer), chuỗi chụp tự động,
 6 filter, làm mịn da, bảng màu và font, cùng máy chủ chia sẻ (Worker `lenslycam.com`, trang `/b/<id>`).
 
+Ảnh chụp bằng camera trước của iPad, hoặc bằng máy ảnh Sony a6300 cắm cáp USB (docs/SONY_A6300_TODO.md).
+
 Luồng: màn chờ → chọn khung (các khung đang bật trong admin) → chụp (số ô + 2 tấm: 2 Cut chụp 4, 3 Cut chụp 5, 4 Cut chụp 6, 6 Cut chụp 8) → chọn ảnh và filter trong thời gian giới hạn (mặc định 45 giây, chỉnh trong admin; hết giờ tự chọn đủ và in) → In → màn cảm ơn có QR. QR chỉ được tạo khi bấm In và in ở vị trí cố định của từng khung. 4 Cut là khổ ngang, khi in được xoay sẵn cho vừa giấy dọc.
 
 ## Build (chỉ cài lên iPad của mình, không lên App Store)
@@ -32,7 +34,7 @@ Nếu dùng Apple ID miễn phí, app hết hạn sau 7 ngày. Nhớ cài lại 
 Ảnh của mỗi lượt khách nằm trong app Tệp → Trên iPad → Photobooth → `Booth/<ngày>/<giờ>/`
 (`print.jpg`, `1–4.jpg`, `1–4.mp4`, `link.txt`), nên không mất ảnh khi upload lỗi.
 
-Màn admin: giữ ngón tay ở góc trên bên phải màn chờ 3 giây (không có PIN, không có gì hiện ra ở góc đó).
+Màn admin: giữ nút bánh răng ⚙ ở góc trên bên phải màn chờ 3 giây (vòng vàng chạy đầy thì mở; chạm nhẹ chỉ hiện lời nhắc; không có PIN).
 
 Khung in: 8 khung có sẵn (2 / 3 / 4 / 6 Cut, mỗi loại nền ngà và nền đen). Vị trí ô ảnh và QR nằm trong
 `assets/frames/<id>/frame.json` (lấy từ gói thiết kế); phần trang trí, tiêu đề, dòng ngày và dòng "Quét mã…" vẽ bằng code
@@ -42,12 +44,14 @@ bật / tắt trong admin → **Khung ảnh** (luôn còn ít nhất 1 khung).
 ## Checklist trước sự kiện
 
 1. Bật điểm phát cá nhân trên iPhone, bật **Tối đa hoá tương thích** (2.4GHz). SELPHY và iPad cùng vào mạng đó.
-2. Mở admin → bật **In ảnh cho khách** → **Chọn máy in** → **In thử** từng khung. Làm theo [docs/SELPHY_TODO.md](docs/SELPHY_TODO.md).
-3. Chụp thử một lượt. Quét QR bằng điện thoại có cài Lensly và một điện thoại không cài: phải xem được ảnh in, 4 ảnh,
+2. Máy ảnh Sony a6300 (nếu dùng): cắm cáp, làm theo [docs/SONY_A6300_TODO.md](docs/SONY_A6300_TODO.md).
+   Không cắm máy ảnh thì app tự chụp bằng camera iPad.
+3. Mở admin → bật **In ảnh cho khách** → **Chọn máy in** → **In thử** từng khung. Làm theo [docs/SELPHY_TODO.md](docs/SELPHY_TODO.md).
+4. Chụp thử một lượt. Quét QR bằng điện thoại có cài Lensly và một điện thoại không cài: phải xem được ảnh in, 4 ảnh,
    4 clip, và tải về được. Ở góc màn chờ phải hiện "đã lên hết".
-4. Vào admin sửa **tiêu đề** và **dòng ngày**. Chọn mức **làm mịn da**.
-5. Bật **Guided Access**: Cài đặt → Trợ năng → Truy cập được hướng dẫn. Mở app, bấm nút sườn 3 lần để bắt đầu.
-6. Cắm sạc cho iPad. Màn hình không tự khoá khi app đang mở.
+5. Vào admin sửa **tiêu đề** và **dòng ngày**. Chọn mức **làm mịn da**.
+6. Bật **Guided Access**: Cài đặt → Trợ năng → Truy cập được hướng dẫn. Mở app, bấm nút sườn 3 lần để bắt đầu.
+7. Cắm sạc cho iPad. Màn hình không tự khoá khi app đang mở.
 
 ## Chạy test
 

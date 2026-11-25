@@ -29,7 +29,7 @@ const Duration IDLE_TIMEOUT = Duration(seconds: 60);
 /// The thank-you screen goes back to the start screen after this.
 const Duration THANKS_TIMEOUT = Duration(seconds: 25);
 
-/// Holding the start screen's top-right corner this long opens the staff screen.
+/// Holding the start screen's gear (top right) this long opens the staff screen.
 const Duration ADMIN_HOLD = Duration(seconds: 3);
 
 /// Album in the iPad's Photos app that every print (with its QR) is copied into.

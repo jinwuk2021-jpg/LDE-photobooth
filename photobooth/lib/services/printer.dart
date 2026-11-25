@@ -124,6 +124,9 @@ class PrintQueue extends ChangeNotifier {
   /// When the printer last answered (admin shows it).
   DateTime? lastSeen;
 
+  /// How long the printer took to answer the last time it did.
+  Duration? lastLatency;
+
   /// Newest first, the last 50.
   List<PrintJob> get jobs => _jobs.reversed.toList();
   int get failedCount => _jobs.where((j) => j.status == JobStatus.failed).length;
@@ -201,8 +204,35 @@ class PrintQueue extends ChangeNotifier {
     if (ok) await _pump();
   }
 
-  Future<bool> _ask(String url) =>
-      _reachable(url).then<bool>((v) => v).timeout(contactTimeout, onTimeout: () => false).catchError((_) => false);
+  Future<bool> _ask(String url) async {
+    final sw = Stopwatch()..start();
+    final ok = await _reachable(
+      url,
+    ).then<bool>((v) => v).timeout(contactTimeout, onTimeout: () => false).catchError((_) => false);
+    if (ok) lastLatency = sw.elapsed;
+    return ok;
+  }
+
+  /// Every failed job goes again ("Thử lại lỗi").
+  void retryFailed() {
+    for (final j in _jobs.where((j) => j.status == JobStatus.failed).toList()) {
+      j
+        ..status = JobStatus.waiting
+        ..error = null
+        ..attempts = 0
+        ..held = false;
+    }
+    _save();
+    _pump();
+  }
+
+  /// The printer was forgotten: nothing is known about it any more.
+  void forget() {
+    printerOk = null;
+    lastSeen = null;
+    lastLatency = null;
+    notifyListeners();
+  }
 
   void _save() {
     while (_jobs.length > 50) {

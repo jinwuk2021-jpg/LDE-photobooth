@@ -29,6 +29,20 @@ class BoothSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// "Quên máy in này".
+  Future<void> forgetPrinter() async {
+    await _prefs.remove('printerUrl');
+    await _prefs.remove('printerName');
+    notifyListeners();
+  }
+
+  /// Cards printed per guest (1–3).
+  int get printCopies => (_prefs.getInt('printCopies') ?? 1).clamp(1, 3);
+  set printCopies(int v) {
+    _prefs.setInt('printCopies', v.clamp(1, 3));
+    notifyListeners();
+  }
+
   /// Seconds a guest has to pick the photos before the booth picks and prints.
   int get pickSeconds => _prefs.getInt('pickSeconds') ?? 45;
   set pickSeconds(int v) {
@@ -66,6 +80,13 @@ class BoothSettings extends ChangeNotifier {
   bool get turnCounterClockwise => _prefs.getBool('turnCcw') ?? false;
   set turnCounterClockwise(bool v) {
     _prefs.setBool('turnCcw', v);
+    notifyListeners();
+  }
+
+  /// Shoot with the Sony camera on the USB-C port when it is ready (the iPad camera otherwise).
+  bool get externalCamera => _prefs.getBool('externalCamera') ?? true;
+  set externalCamera(bool v) {
+    _prefs.setBool('externalCamera', v);
     notifyListeners();
   }
 

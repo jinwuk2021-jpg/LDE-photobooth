@@ -27,22 +27,22 @@ không cần build lại app.
 
 ## 2. Cài đặt trong app
 
-Mở admin: giữ ngón tay ở góc trên bên phải màn chờ 3 giây.
+Mở admin: giữ nút bánh răng ⚙ ở góc trên bên phải màn chờ 3 giây (vòng vàng chạy đầy).
 
-- [ ] Kiểm tra **In ảnh cho khách** đang bật (bật sẵn)
-- [ ] **Chọn máy in** → chọn SELPHY
+- [ ] Trang **Máy in** → thẻ **Khi in**: **Tự in khi khách bấm In** đang bật (bật sẵn)
+- [ ] **Tìm máy in AirPrint** (hoặc **Chọn máy khác**) → chọn SELPHY. Không thấy máy thì nhập IP ở thẻ **Kết nối thủ công bằng IP**
   (nếu iPad hỏi quyền "Mạng cục bộ" thì bấm **Cho phép**)
-- [ ] **Kiểm tra kết nối** → phải báo "Máy in trả lời: OK"
-- [ ] Dưới tên máy in phải có chấm xanh **Máy in đang kết nối · trả lời lúc …**
+- [ ] Góc trên bên phải trang hiện nhãn xanh **Sẵn sàng**; thẻ **Kiểm tra nhanh**: **Máy in phản hồi** có số ms
+- [ ] Thanh bên trái: chấm xanh cạnh **Máy in**
 
 App tự giữ kết nối: hỏi máy in mỗi 15 giây khi không thấy (mỗi 60 giây khi đang ổn), và hỏi lại ngay khi mở
 lại app. Nếu máy in mất kết nối lúc khách bấm in, tấm đó **không bị mất**: nằm chờ ("Đang chờ máy in kết nối lại")
 và tự in khi máy in có lại. Máy in báo lỗi (hết giấy, kẹt giấy…) thì app tự thử lại 3 lần (sau 15, 30, 60 giây)
-rồi mới báo **Lỗi** trong admin; khi đó sửa máy in rồi bấm **In lại**.
+rồi mới báo **Lỗi** trong trang **Lịch sử in**; khi đó sửa máy in rồi bấm **Thử lại lỗi** (hoặc **In lại** ở lượt đó).
 
 ## 3. In thử từng khung (ghi lại kết quả)
 
-Bấm lần lượt nút **In thử …** của từng khung đang bật trong admin (mặc định 2 Cut Ngà, 3 Cut Ngà, 4 Cut Đen, 6 Cut Ngà).
+Trang **Máy in** → **In thử** → chọn khung, hoặc trang **Khung ảnh** → nút máy in trên từng thẻ khung đang bật (mặc định 2 Cut Ngà, 3 Cut Ngà, 4 Cut Đen, 6 Cut Ngà).
 
 | Kiểm tra | 2 Cut | 3 Cut | 4 Cut | 6 Cut |
 |---|---|---|---|---|
@@ -57,13 +57,13 @@ Bấm lần lượt nút **In thử …** của từng khung đang bật trong a
 
 Tấm in thử có QR trỏ tới một link giả (`.../b/testtesttest`): trang sẽ báo "đang tải lên", như vậy là bình thường.
 
-## 3b. Tự chỉnh nếu bản in chưa đẹp (ngay trong admin, rồi In thử lại)
+## 3b. Tự chỉnh nếu bản in chưa đẹp (trang Máy in, rồi In thử lại)
 
 | Thấy gì | Chỉnh |
 |---|---|
 | Có viền trắng quanh ảnh | **Kiểu in: Tràn lề** (mặc định) |
-| Bị cắt mất chữ hoặc QR ở mép | **Kiểu in: Vừa khổ (có viền)** |
-| Màu in ra nhạt, thiếu đậm | **Độ đậm màu: Rất đậm** (mặc định là Đậm) |
+| Bị cắt mất chữ hoặc QR ở mép | **Kiểu in: Có viền** |
+| Màu in ra nhạt, thiếu đậm | thẻ **Màu tấm in** → **Độ đậm màu: Rất đậm** (mặc định là Đậm) |
 | Màu quá gắt, da bị đỏ / cam | **Độ đậm màu: Vừa** |
 | Ảnh in ra tối, màu vàng bị xỉn | **Độ sáng: +5%**, chưa đủ thì **+10%** |
 | Ảnh nhạt, bị bạc / mờ như phủ sương | **Độ sáng: −5%** (và kiểm tra Độ đậm màu) |
@@ -75,11 +75,11 @@ Các tuỳ chọn này áp dụng cho mọi lần in sau, kể cả In lại. �
 
 - [ ] Bấm In thử 3 lần liên tiếp thật nhanh → máy in ra đủ 3 tấm lần lượt, không mất tấm nào
 - [ ] Đo thời gian in một tấm (CP1500 khoảng 40–45 giây mỗi tấm postcard)
-- [ ] **Tắt SELPHY** rồi bấm In thử → trong "Hàng đợi in" lệnh phải chuyển sang **Lỗi** → bật máy lại → bấm **In lại** → in được
+- [ ] **Tắt SELPHY** rồi bấm In thử → nhãn **Mất kết nối**, lệnh nằm chờ (trang **Lịch sử in**: Chờ máy in) → bật máy lại → tự in
 - [ ] **Rút khay giấy** (giả hết giấy) rồi bấm In thử → ghi lại chuyện gì xảy ra:
   - báo Lỗi ngay, hay
   - đứng chờ (app tự bỏ qua sau tối đa **3 phút** rồi báo "Máy in không phản hồi sau 3 phút")
-- [ ] Lắp lại giấy → In lại lệnh lỗi
+- [ ] Lắp lại giấy → **Lịch sử in** → **Thử lại lỗi**
 
 ## 5. Chạy thử một lượt thật
 
@@ -91,7 +91,7 @@ Các tuỳ chọn này áp dụng cho mọi lần in sau, kể cả In lại. �
 
 - Ảnh chụp các tấm in thử (thấy rõ mép, viền, màu, QR)
 - Bảng ở mục 3 đã điền
-- Ảnh chụp màn hình "Hàng đợi in" nếu có lỗi (kèm dòng lỗi)
+- Ảnh chụp màn hình trang **Máy in** và **Lịch sử in** nếu có lỗi
 - Thời gian in một tấm, và kết quả thử rút khay giấy
 
 Nếu chỉnh ở mục 3b vẫn chưa ổn, Claude có thể chỉnh thêm:
@@ -104,7 +104,7 @@ Nếu chỉnh ở mục 3b vẫn chưa ổn, Claude có thể chỉnh thêm:
 
 - App gửi lệnh in qua `UIPrintInteractionController` tới máy in đã chọn (`UIPrinter(url:)`), loại ảnh `.photo`, khổ dọc,
   khổ giấy 283.5 × 419.5 pt (100×148 mm). App tự vẽ trang in (`PhotoPageRenderer`): "Tràn lề" phủ kín cả tờ giấy,
-  "Vừa khổ" nằm trọn trong vùng máy in in được. Lệnh in đi lần lượt từng cái: lệnh sau chỉ gửi khi lệnh trước đã báo xong
+  "Có viền" nằm trọn trong vùng máy in in được. Lệnh in đi lần lượt từng cái: lệnh sau chỉ gửi khi lệnh trước đã báo xong
   hoặc đã quá 3 phút.
 - File gửi máy in: `Booth/<ngày>/<giờ>/print.jpg` (4 Cut dùng `print_may_in.jpg`, đã xoay dọc). In thử nằm trong `Booth/in-thu/`.
 - Code: `ios/Runner/AppDelegate.swift` (phần native), `lib/services/printer.dart` (hàng đợi in).

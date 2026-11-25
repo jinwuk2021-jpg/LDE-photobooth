@@ -20,6 +20,7 @@ import 'package:photobooth/booth/print_layout.dart';
 import 'package:photobooth/camera/filters.dart';
 import 'package:photobooth/config.dart';
 import 'package:photobooth/main.dart';
+import 'package:photobooth/screens/admin_screen.dart';
 import 'package:photobooth/screens/pick_screen.dart';
 import 'package:photobooth/screens/shoot_screen.dart';
 import 'package:photobooth/screens/thanks_screen.dart';
@@ -153,6 +154,8 @@ void main() {
       what: '${frame.shots} shots',
     );
     log('${frame.id}: ${frame.shots} shots in ${shotSw.elapsed.inMilliseconds} ms');
+    // Heat: the camera is off while the guest picks.
+    await waitFor(t, () => booth.camera.preview == null, timeout: const Duration(seconds: 5), what: 'camera off at the picker');
     await waitFor(t, () => byClass('_ShotTile').evaluate().length == frame.shots, timeout: const Duration(seconds: 30), what: 'developed tiles');
     if (filter != null) {
       await t.tap(byClass('_FilterChip').at(BoothFilter.values.indexOf(filter)));
@@ -237,7 +240,24 @@ void main() {
   check('guest flows on the device: 2 Cut (filter changed), then 4 Cut (landscape)', (t) async {
     lang.value = Lang.vi;
     await t.pumpWidget(BoothApp(booth: booth));
-    await waitFor(t, () => booth.camera.preview != null, timeout: const Duration(seconds: 20), what: 'camera');
+    await waitFor(t, () => find.text(T.now.start).evaluate().isNotEmpty, timeout: const Duration(seconds: 20), what: 'start');
+    // Heat: the camera stays off on the start screen.
+    expect(booth.camera.preview, isNull);
+
+    // Staff: a tap on the gear only shows the hint; holding it 3 s opens admin.
+    await waitFor(t, () => find.byIcon(Icons.settings).evaluate().isNotEmpty, timeout: const Duration(seconds: 20), what: 'gear');
+    await t.tap(find.byIcon(Icons.settings));
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.byType(AdminScreen), findsNothing);
+    expect(find.byType(ShootScreen), findsNothing, reason: 'the gear never starts a guest');
+    final hold = await t.startGesture(t.getCenter(find.byIcon(Icons.settings)));
+    await Future<void>.delayed(ADMIN_HOLD + const Duration(milliseconds: 400));
+    await t.pump();
+    await hold.up();
+    await waitFor(t, () => find.byType(AdminScreen).evaluate().isNotEmpty, timeout: const Duration(seconds: 3), what: 'admin');
+    log('gear: hold ${ADMIN_HOLD.inSeconds} s opens admin');
+    await t.tap(find.text('Về màn chờ'));
+    await waitFor(t, () => find.byType(AdminScreen).evaluate().isEmpty, timeout: const Duration(seconds: 3), what: 'admin closed');
 
     final two = booth.frames.all.firstWhere((f) => f.id == 'lpe_2cut_ivory');
     final f2 = await guest(t, two, filter: BoothFilter.values.last);
@@ -254,9 +274,14 @@ void main() {
   check('every filter develops on the GPU; every frame renders and saves', (t) async {
     // One more shot straight from the camera.
     final frame = booth.frames.all.firstWhere((f) => f.id == 'lpe_6cut_ivory');
+    await booth.camera.wake();
     await booth.camera.live.start();
     final shot = await booth.camera.capture(0, cellAspect: frame.cellAspect, skin: booth.settings.skin);
     await booth.camera.live.stop();
+    // Sharpness: the format's biggest stills (2304 × 1296 on the M4 front camera; 1920 × 1080 before).
+    final (rw, rh) = await imageSize(shot.rawPath);
+    log('raw still ${rw}x$rh');
+    expect(rw > rh ? rw : rh, greaterThan(1920), reason: 'still ${rw}x$rh');
     final base = await shot.base;
     final out = Directory(p.join(booth.docs.path, 'Booth', 'device-test'))..createSync(recursive: true);
     created.add(out);
@@ -295,5 +320,7 @@ void main() {
       img.dispose();
     }
     booth.camera.release([shot]);
+    await booth.camera.sleep();
+    expect(booth.camera.preview, isNull);
   });
 }

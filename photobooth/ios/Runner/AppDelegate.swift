@@ -1,5 +1,7 @@
 import Flutter
+import ImageCaptureCore
 import UIKit
+import UniformTypeIdentifiers
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -16,6 +18,12 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BoothPrinter") {
       BoothPrinter.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BoothFiles") {
+      BoothFiles.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BoothPtp") {
+      BoothPtp.register(with: registrar)
     }
   }
 }
@@ -92,7 +100,7 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
     UIPrintPaper.bestPaper(forPageSize: Self.postcard, withPapersFrom: paperList)
   }
 
-  private static func topViewController() -> UIViewController? {
+  static func topViewController() -> UIViewController? {
     let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
     var vc = scene?.windows.first(where: { $0.isKeyWindow })?.rootViewController ?? scene?.windows.first?.rootViewController
     while let presented = vc?.presentedViewController { vc = presented }
@@ -122,5 +130,232 @@ final class PhotoPageRenderer: UIPrintPageRenderer {
       : min(target.width / size.width, target.height / size.height)
     let w = size.width * scale, h = size.height * scale
     image.draw(in: CGRect(x: target.midX - w / 2, y: target.midY - h / 2, width: w, height: h))
+  }
+}
+
+
+/// A camera on the USB-C port (Sony a6300 in "PC Remote"), as a plain PTP pipe: finds it with
+/// ImageCaptureCore, opens the session and passes raw PTP commands through. The Sony protocol
+/// itself is in Dart (lib/camera/sony_camera.dart), where it is unit tested.
+///
+/// Channel "booth/ptp": start → authorization status; send {code, params, out?} →
+/// {code, params, data}. Events "booth/ptp/events": added / opened / removed / event.
+final class BoothPtp: NSObject, FlutterPlugin, FlutterStreamHandler, ICDeviceBrowserDelegate,
+  ICCameraDeviceDelegate
+{
+  private let browser = ICDeviceBrowser()
+  private var camera: ICCameraDevice?
+  private var sink: FlutterEventSink?
+  private var transaction: UInt32 = 0
+  private var started = false
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let instance = BoothPtp()
+    let channel = FlutterMethodChannel(name: "booth/ptp", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(instance, channel: channel)
+    FlutterEventChannel(name: "booth/ptp/events", binaryMessenger: registrar.messenger())
+      .setStreamHandler(instance)
+  }
+
+  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+    sink = events
+    // A camera already plugged in before Dart listened.
+    if let cam = camera { emitAdded(cam) }
+    return nil
+  }
+
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    sink = nil
+    return nil
+  }
+
+  private func emit(_ event: [String: Any]) {
+    DispatchQueue.main.async { self.sink?(event) }
+  }
+
+  private func emitAdded(_ cam: ICCameraDevice) {
+    emit([
+      "event": "added", "name": cam.name ?? "", "vendor": Int(cam.usbVendorID),
+      "product": Int(cam.usbProductID), "open": cam.hasOpenSession,
+    ])
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let args = call.arguments as? [String: Any] ?? [:]
+    switch call.method {
+    case "start": start(result)
+    case "send": send(args, result)
+    case "reopen":
+      guard let cam = camera else { return result(false) }
+      if cam.hasOpenSession { cam.requestCloseSession() }
+      cam.requestOpenSession()
+      result(true)
+    default: result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func start(_ result: @escaping FlutterResult) {
+    if started { return result("started") }
+    started = true
+    browser.delegate = self
+    if #available(iOS 15.2, *),
+      let mask = ICDeviceTypeMask(rawValue: ICDeviceTypeMask.camera.rawValue | ICDeviceLocationTypeMask.local.rawValue)
+    {
+      browser.browsedDeviceTypeMask = mask
+    }
+    // Control (PTP commands) and contents (files) both need the user's OK once.
+    browser.requestContentsAuthorization { contents in
+      self.browser.requestControlAuthorization { control in
+        DispatchQueue.main.async {
+          self.browser.start()
+          result("contents=\(contents.rawValue) control=\(control.rawValue)")
+        }
+      }
+    }
+  }
+
+  private func send(_ args: [String: Any], _ result: @escaping FlutterResult) {
+    guard let cam = camera, cam.hasOpenSession else {
+      return result(FlutterError(code: "closed", message: "Chưa kết nối máy ảnh", details: nil))
+    }
+    let code = UInt16(truncatingIfNeeded: args["code"] as? Int ?? 0)
+    let params = (args["params"] as? [Int] ?? []).map { UInt32(truncatingIfNeeded: $0) }
+    let out = (args["out"] as? FlutterStandardTypedData)?.data
+    transaction &+= 1
+    // PTP command container: length, type 1 (command), code, transaction id, parameters.
+    var command = Data()
+    func put32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { command.append(contentsOf: $0) } }
+    func put16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { command.append(contentsOf: $0) } }
+    put32(UInt32(12 + 4 * params.count))
+    put16(1)
+    put16(code)
+    put32(transaction)
+    params.forEach(put32)
+    cam.requestSendPTPCommand(command, outData: out) { data, response, error in
+      DispatchQueue.main.async {
+        if let error = error {
+          return result(FlutterError(code: "ptp", message: error.localizedDescription, details: nil))
+        }
+        // Response container: length, type 3, code, transaction id, parameters.
+        let bytes = [UInt8](response)
+        func u16(_ o: Int) -> Int { o + 1 < bytes.count ? Int(bytes[o]) | Int(bytes[o + 1]) << 8 : 0 }
+        func u32(_ o: Int) -> Int { u16(o) | u16(o + 2) << 16 }
+        var outParams: [Int] = []
+        var o = 12
+        while o + 3 < bytes.count {
+          outParams.append(u32(o))
+          o += 4
+        }
+        result([
+          "code": bytes.count >= 8 ? u16(6) : 0, "params": outParams,
+          "data": FlutterStandardTypedData(bytes: data),
+        ])
+      }
+    }
+  }
+
+  // MARK: ICDeviceBrowserDelegate
+
+  func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
+    guard let cam = device as? ICCameraDevice else { return }
+    camera = cam
+    cam.delegate = self
+    cam.ptpEventHandler = { [weak self] data in self?.ptpEvent(data) }
+    emitAdded(cam)
+    cam.requestOpenSession()
+  }
+
+  func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
+    gone(device)
+  }
+
+  private func gone(_ device: ICDevice) {
+    guard device === camera else { return }
+    camera = nil
+    emit(["event": "removed"])
+  }
+
+  private func ptpEvent(_ data: Data) {
+    let b = [UInt8](data)
+    guard b.count >= 12 else { return }
+    let code = Int(b[6]) | Int(b[7]) << 8
+    var params: [Int] = []
+    var o = 12
+    while o + 3 < b.count {
+      params.append(Int(b[o]) | Int(b[o + 1]) << 8 | Int(b[o + 2]) << 16 | Int(b[o + 3]) << 24)
+      o += 4
+    }
+    emit(["event": "event", "code": code, "params": params])
+  }
+
+  // MARK: ICDeviceDelegate
+
+  func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
+    emit(["event": "opened", "error": error?.localizedDescription as Any])
+  }
+
+  func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
+    emit(["event": "closed"])
+  }
+
+  func didRemove(_ device: ICDevice) { gone(device) }
+
+  // MARK: ICCameraDeviceDelegate (files are not used: the photo comes over PTP)
+
+  func cameraDevice(_ camera: ICCameraDevice, didAdd items: [ICCameraItem]) {}
+  func cameraDevice(_ camera: ICCameraDevice, didRemove items: [ICCameraItem]) {}
+  func cameraDevice(
+    _ camera: ICCameraDevice, didReceiveThumbnail thumbnail: CGImage?, for item: ICCameraItem, error: Error?
+  ) {}
+  func cameraDevice(
+    _ camera: ICCameraDevice, didReceiveMetadata metadata: [AnyHashable: Any]?, for item: ICCameraItem,
+    error: Error?
+  ) {}
+  func cameraDevice(_ camera: ICCameraDevice, didRenameItems items: [ICCameraItem]) {}
+  func cameraDeviceDidChangeCapability(_ camera: ICCameraDevice) {}
+  func cameraDevice(_ camera: ICCameraDevice, didReceivePTPEvent eventData: Data) { ptpEvent(eventData) }
+  func deviceDidBecomeReady(withCompleteContentCatalog device: ICCameraDevice) {}
+  func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
+  func cameraDeviceDidEnableAccessRestriction(_ device: ICDevice) {}
+}
+
+
+/// Picks a PNG from the Files app (frame PNGs keep their transparency; the Photos picker may not).
+/// Channel "booth/files": pickPng → a copy's path in the temporary folder, or nil when cancelled.
+final class BoothFiles: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
+  private var pending: FlutterResult?
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(name: "booth/files", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(BoothFiles(), channel: channel)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard call.method == "pickPng" else { return result(FlutterMethodNotImplemented) }
+    guard pending == nil, let top = BoothPrinter.topViewController() else { return result(nil) }
+    pending = result
+    let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.png], asCopy: true)
+    picker.delegate = self
+    picker.allowsMultipleSelection = false
+    top.present(picker, animated: true)
+  }
+
+  func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    guard let url = urls.first else { return finish(nil) }
+    let dest = FileManager.default.temporaryDirectory
+      .appendingPathComponent("frame-\(Int(Date().timeIntervalSince1970 * 1000))-\(url.lastPathComponent)")
+    do {
+      try FileManager.default.copyItem(at: url, to: dest)
+      finish(dest.path)
+    } catch {
+      finish(nil)
+    }
+  }
+
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finish(nil) }
+
+  private func finish(_ path: String?) {
+    pending?(path)
+    pending = nil
   }
 }

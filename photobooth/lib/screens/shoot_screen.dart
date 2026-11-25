@@ -61,7 +61,12 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
       onError: (_) => _finish(ok: false),
     );
     // Live starts now (the encoder warms up), the countdown after READY_DELAY.
-    Future.wait([widget.booth.camera.live.start().catchError((_) {}), Future<void>.delayed(READY_DELAY)])
+    // The camera was turned on at Start; a retake (from the photo picker) turns it on again here.
+    final cam = widget.booth.camera;
+    Future.wait([
+      cam.wake().then((_) => cam.live.start()).catchError((_) {}),
+      Future<void>.delayed(READY_DELAY),
+    ])
         .whenComplete(() {
           if (mounted) _sequence.start();
         });
@@ -85,7 +90,12 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
     try {
       final b = widget.booth;
       widget.guest.shots.add(
-        await b.camera.capture(index, cellAspect: widget.guest.frame.cellAspect, skin: b.settings.skin),
+        await b.camera.capture(
+          index,
+          cellAspect: widget.guest.frame.cellAspect,
+          skin: b.settings.skin,
+          external: b.settings.externalCamera,
+        ),
       );
     } finally {
       if (mounted) _burst.forward(from: 0);
@@ -106,7 +116,7 @@ class _ShootScreenState extends State<ShootScreen> with TickerProviderStateMixin
     return Stack(
       fit: StackFit.expand,
       children: [
-        CameraView(widget.booth.camera.preview),
+        BoothPreview(widget.booth),
         // Vignette + a darker top for the pill.
         const DecoratedBox(
           decoration: BoxDecoration(

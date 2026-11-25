@@ -311,13 +311,20 @@ class _GoldButtonState extends State<GoldButton> with TickerProviderStateMixin {
           Icon(widget.icon, color: fg, size: widget.fontSize),
           const SizedBox(width: 14),
         ],
-        Text(
-          widget.label,
-          style: LuxFonts.sans(
-            size: widget.fontSize,
-            weight: FontWeight.w600,
-            color: fg,
-            spacing: widget.fontSize * 0.01,
+        // Shrinks to fit a narrow button (side-by-side buttons in admin); unchanged otherwise.
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              widget.label,
+              maxLines: 1,
+              style: LuxFonts.sans(
+                size: widget.fontSize,
+                weight: FontWeight.w600,
+                color: fg,
+                spacing: widget.fontSize * 0.01,
+              ),
+            ),
           ),
         ),
         if (widget.icon != null && widget.iconAfter) ...[
@@ -465,7 +472,7 @@ class _LineButtonState extends State<LineButton> {
           child: Container(
             width: widget.width,
             height: widget.height,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: widget.height < 70 ? 16 : 24),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               color: _down ? const Color(0x29D4AF6A) : const Color(0x590B0B12),
@@ -479,9 +486,15 @@ class _LineButtonState extends State<LineButton> {
                   Icon(widget.icon, color: Lux.ivory, size: widget.fontSize),
                   const SizedBox(width: 10),
                 ],
-                Text(
-                  widget.label,
-                  style: LuxFonts.sans(size: widget.fontSize, weight: FontWeight.w500),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      style: LuxFonts.sans(size: widget.fontSize, weight: FontWeight.w500),
+                    ),
+                  ),
                 ),
               ],
             ),

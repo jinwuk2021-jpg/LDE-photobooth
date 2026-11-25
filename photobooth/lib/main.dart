@@ -118,6 +118,13 @@ class _HomeState extends State<Home> {
   void _go(Stage stage) {
     setState(() => _stage = stage);
     _touch();
+    // The camera runs only from Start to the last shot: frame picker (it settles its exposure
+    // meanwhile) and shooting. Start screen, photo picker and thank-you keep it off (heat).
+    if (stage == Stage.layout || stage == Stage.shoot) {
+      unawaited(booth.camera.wake().catchError((Object _) {}));
+    } else {
+      unawaited(booth.camera.sleep());
+    }
   }
 
   /// Any touch restarts the 60 s timer on the frame picker (the photo picker has its own limit).
