@@ -147,11 +147,12 @@ void main() {
 
   test('jobs go one at a time, in order, and survive a relaunch', () async {
     final sent = <String>[];
+    var online = true;
     final q = PrintQueue(
       prefs,
       settings,
       docs,
-      reachable: (_) async => true,
+      reachable: (_) async => online,
       send: (_, path, _) async {
         sent.add(path.split('/').last);
         return null;
@@ -181,5 +182,49 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(sent, ['1.jpg', '2.jpg']);
     expect(again.jobs.map((j) => j.status), [JobStatus.done, JobStatus.done]);
+  });
+
+  test('jobs whose picture is gone are dropped, at launch and when their turn comes', () async {
+    // Saved by an earlier run: one card still there, two deleted (a cleaned-up test session).
+    final kept = card('kept.jpg');
+    await prefs.setString('printJobs', '[${[
+      for (final (name, status) in [('gone1.jpg', 'failed'), ('kept.jpg', 'failed'), ('gone2.jpg', 'waiting')])
+        '{"path":"$name","created":"2026-11-26T00:45:35.000","status":"$status"}',
+    ].join(',')}]');
+    final sent = <String>[];
+    var online = true;
+    final q = PrintQueue(
+      prefs,
+      settings,
+      docs,
+      reachable: (_) async => online,
+      send: (_, path, _) async {
+        sent.add(path);
+        return null;
+      },
+    )..load();
+    expect(q.jobs.map((j) => j.path), ['kept.jpg']);
+    expect(q.failedCount, 1);
+    expect(prefs.getString('printJobs'), isNot(contains('gone')));
+
+    // Deleted while waiting for the printer: gone from the queue, the next one still prints.
+    online = false;
+    final doomed = card('doomed.jpg');
+    q.add(doomed);
+    final next = card('next.jpg');
+    q.add(next);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(sent, isEmpty);
+    File(doomed).deleteSync();
+    online = true;
+    q.resume();
+    for (var i = 0; i < 20 && sent.isEmpty; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    expect(sent, [next]);
+    expect(q.jobs.map((j) => j.path), isNot(contains('doomed.jpg')));
+    expect(q.failedCount, 1, reason: 'only the old kept.jpg failure');
+    expect(kept, isNotEmpty);
+    q.dispose();
   });
 }

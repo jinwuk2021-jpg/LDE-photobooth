@@ -140,6 +140,16 @@ void main() {
       await t.runAsync(() => GoogleFonts.pendingFonts().catchError((_) => <void>[]));
       await shot(t, '1-may-in');
       expect(find.text('Sẵn sàng'), findsWidgets);
+
+      // A toggle shows its new state at once (it used to wait for a tab switch).
+      final toggle = find.byType(GoldToggle).first;
+      final before = t.widget<GoldToggle>(toggle).value;
+      for (final want in [!before, before]) {
+        await t.tap(toggle);
+        await t.pump();
+        expect(t.widget<GoldToggle>(find.byType(GoldToggle).first).value, want);
+      }
+
       for (final (label, name) in [
         ('Máy ảnh', '2-may-anh'),
         ('Khung ảnh', '3-khung-anh'),
@@ -214,6 +224,26 @@ void main() {
       expect(find.text('Chọn file PNG khung'), findsOneWidget);
       await t.tap(find.text('Huỷ'));
       await settle(t);
+
+      // History: delete one guest (asked first), then "Dọn máy" clears the rest (all online).
+      await t.tap(find.text('Lịch sử in').first);
+      await settle(t);
+      expect(find.textContaining('6 lượt trên iPad này'), findsOneWidget);
+      await t.tap(find.byIcon(Icons.delete_outline).first);
+      await settle(t);
+      await shot(t, '5b-xoa-luot');
+      expect(find.text('Xoá lượt 6?'), findsOneWidget);
+      await t.tap(find.text('Xoá'));
+      await settle(t);
+      expect(find.textContaining('5 lượt trên iPad này'), findsOneWidget);
+      expect(Directory(p.join(b.docs.path, 'Booth', '2026-12-23', '21-45-00')).existsSync(), isFalse);
+      await t.tap(find.text('Dọn máy'));
+      await settle(t);
+      await shot(t, '5c-don-may');
+      await t.tap(find.text('Xoá 5 lượt'));
+      await settle(t);
+      expect(find.text('Chưa có lượt chụp nào.'), findsOneWidget);
+      expect(b.prints.jobs, isEmpty, reason: 'their print jobs go with them');
 
       await t.tap(find.text('Về màn chờ'));
       await t.pump(const Duration(milliseconds: 500));

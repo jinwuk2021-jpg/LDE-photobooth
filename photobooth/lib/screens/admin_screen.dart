@@ -39,7 +39,9 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     final b = widget.booth;
-    final page = switch (_tab) {
+    // Built inside the ListenableBuilder below: a page made once out here was the same widget
+    // on every change, so Flutter skipped it and toggles only showed after switching tabs.
+    Widget page() => switch (_tab) {
       AdminTab.printer => PrinterPage(booth: b),
       AdminTab.camera => CameraPage(booth: b),
       AdminTab.frames when _editing != null => FrameEditPage(
@@ -79,12 +81,12 @@ class _AdminScreenState extends State<AdminScreen> {
                   child: Padding(
                     padding: const EdgeInsets.only(left: 32, right: 40),
                     child: ListenableBuilder(
-                      listenable: Listenable.merge([b.settings, b.prints, b.frames]),
+                      listenable: Listenable.merge([b.settings, b.prints, b.frames, b.camera.sony]),
                       builder: (context, _) => AnimatedSwitcher(
                         duration: const Duration(milliseconds: 380),
                         reverseDuration: const Duration(milliseconds: 120),
                         transitionBuilder: luxTransition,
-                        child: KeyedSubtree(key: ValueKey((_tab, _editing)), child: page),
+                        child: KeyedSubtree(key: ValueKey((_tab, _editing)), child: page()),
                       ),
                     ),
                   ),

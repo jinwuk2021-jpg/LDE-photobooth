@@ -102,7 +102,52 @@ class UploadQueue extends ChangeNotifier {
       final list = jsonDecode(stateFile.readAsStringSync()) as List;
       _items.addAll(list.map((e) => UploadItem.fromJson((e as Map).cast<String, Object?>())));
     } catch (_) {}
+    try {
+      _sentClips.addAll((jsonDecode(_sentClipsFile.readAsStringSync()) as List).cast<String>());
+    } catch (_) {}
     _pump();
+  }
+
+  /// Whether some of this guest's files are not online yet.
+  bool isPending(String session) => _items.any((i) => i.session == session);
+
+  /// A session deleted in "Lịch sử in": nothing of it is sent any more.
+  void forget(String session) {
+    _items.removeWhere((i) => i.session == session);
+    _save();
+  }
+
+  // Live clips already online (paths relative to docs), deleted from the iPad on the start screen.
+  final Set<String> _sentClips = {};
+  File get _sentClipsFile => File(p.join(stateFile.parent.path, 'uploaded_clips.json'));
+
+  void _saveSentClips() {
+    try {
+      _sentClipsFile.parent.createSync(recursive: true);
+      _sentClipsFile.writeAsStringSync(jsonEncode(_sentClips.toList()));
+    } catch (_) {}
+  }
+
+  /// Deletes the Live clips that are on the server already (they are the biggest files; the
+  /// photos and the print stay for "In lại"). Called on the start screen only, never while a guest
+  /// still looks at the QR. Returns how many were deleted.
+  int deleteUploadedClips() {
+    if (_sentClips.isEmpty) return 0;
+    var n = 0;
+    for (final rel in _sentClips.toList()) {
+      // Sent again (a retake with the same name) and not online yet: keep it for now.
+      if (_items.any((i) => i.path == rel)) continue;
+      final f = File(p.join(docs.path, rel));
+      try {
+        if (f.existsSync()) {
+          f.deleteSync();
+          n++;
+        }
+        _sentClips.remove(rel);
+      } catch (_) {}
+    }
+    _saveSentClips();
+    return n;
   }
 
   void add(String session, String name, String absolutePath, String title) {
@@ -198,6 +243,10 @@ class UploadQueue extends ChangeNotifier {
     }
     if (error == null) {
       _items.remove(item);
+      if (item.name.endsWith('.mp4')) {
+        _sentClips.add(item.path);
+        _saveSentClips();
+      }
     } else {
       item.error = error;
       item.nextAt = DateTime.now().add(item.attempts < _backoff.length ? _backoff[item.attempts] : _later);

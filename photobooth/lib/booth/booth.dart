@@ -201,6 +201,14 @@ class Booth {
     unawaited(camera.cam.saveToLibrary(path: path, isVideo: false, album: PHOTOS_ALBUM).catchError((_) => false));
   }
 
+  /// "Xoá" in "Lịch sử in": the guest's folder leaves the iPad. The print stays in Photos and the
+  /// guest's page online; files not uploaded yet are not sent any more.
+  void deleteSession(Directory dir, String? id) {
+    if (id != null) uploads.forget(id);
+    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    prints.dropMissing();
+  }
+
   /// Frees a guest's raw files, clip segments and images.
   void discard(GuestSession guest) {
     camera.release(guest.shots);

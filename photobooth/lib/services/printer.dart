@@ -137,7 +137,16 @@ class PrintQueue extends ChangeNotifier {
       final list = jsonDecode(_prefs.getString('printJobs') ?? '[]') as List;
       _jobs.addAll(list.map((e) => PrintJob.fromJson((e as Map).cast<String, Object?>())));
     } catch (_) {}
+    dropMissing();
     _pump();
+  }
+
+  /// Forgets the jobs whose picture is gone (a deleted session, a cleaned-up test): they can never
+  /// print, and they showed as errors in "Lịch sử in" with no session to go with them.
+  void dropMissing() {
+    final before = _jobs.length;
+    _jobs.removeWhere((j) => j.status != JobStatus.printing && !File(p.join(docs.path, j.path)).existsSync());
+    if (_jobs.length != before) _save();
   }
 
   /// Starts the watchdog (and re-checks when the iPad wakes the app). Called once from main().
@@ -253,7 +262,12 @@ class PrintQueue extends ChangeNotifier {
     if (url == null) {
       error = 'Chưa chọn máy in';
     } else if (!File(file).existsSync()) {
-      error = 'Không tìm thấy file ảnh in';
+      // Gone for good: dropped, not shown as an error that no retry can fix.
+      _jobs.remove(job);
+      _busy = false;
+      _save();
+      unawaited(_pump());
+      return;
     } else if (!await _ask(url)) {
       // Asleep / off / off the hotspot: the job keeps its place and goes when the watchdog sees
       // the printer again. Not a failure, so no retry is used up.

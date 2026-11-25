@@ -99,6 +99,12 @@ void main() {
   });
 
   tearDownAll(() async {
+    for (final d in created) {
+      if (d.existsSync()) d.deleteSync(recursive: true);
+    }
+    // The queue still holds the test's jobs in memory (it saved them back after the restore
+    // before, 14 errors in "Lịch sử in" with no session): drop them, then restore the settings.
+    booth.prints.dropMissing();
     booth.prints.dispose();
     for (final k in keep) {
       final v = saved[k];
@@ -111,9 +117,6 @@ void main() {
       } else if (v is List<String>) {
         await prefs.setStringList(k, v);
       }
-    }
-    for (final d in created) {
-      if (d.existsSync()) d.deleteSync(recursive: true);
     }
     log('restored ${keep.join(", ")}; deleted ${created.length} test session folder(s)');
     log('DONE');

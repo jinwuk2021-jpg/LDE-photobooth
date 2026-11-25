@@ -106,6 +106,7 @@ class _HomeState extends State<Home> {
   Future<void> _openCamera() async {
     final tmp = Directory(p.join((await getTemporaryDirectory()).path, 'booth'))..createSync(recursive: true);
     final ok = await booth.camera.init(tmp);
+    booth.uploads.deleteUploadedClips();
     if (mounted) setState(() => _stage = ok ? Stage.idle : Stage.noCamera);
   }
 
@@ -125,6 +126,9 @@ class _HomeState extends State<Home> {
     } else {
       unawaited(booth.camera.sleep());
     }
+    // Back on the start screen (the last guest is done with the QR): Live clips already on the
+    // server leave the iPad, which fills up fast otherwise.
+    if (stage == Stage.idle) booth.uploads.deleteUploadedClips();
   }
 
   /// Any touch restarts the 60 s timer on the frame picker (the photo picker has its own limit).

@@ -369,6 +369,42 @@ void main() {
       await settle();
       expect(q.items, isEmpty);
     });
+
+    test('clips leave the iPad once online, only when asked (start screen), also after a relaunch', () async {
+      final state = File('${docs.path}/state.json');
+      var fail = true;
+      UploadQueue queue() => UploadQueue(
+        docs: docs,
+        stateFile: state,
+        key: 'k',
+        client: MockClient((r) async => fail && r.url.path.endsWith('2.mp4') ? http.Response('', 500) : http.Response('{}', 201)),
+      );
+      final q = queue();
+      for (final n in ['print.jpg', '1.jpg', '1.mp4', '2.mp4']) {
+        q.add('abcdefghjkmn', n, file(n).path, 'T');
+      }
+      await settle();
+      expect(q.items.map((i) => i.name), ['2.mp4'], reason: '2.mp4 failed once');
+      // Online, but the guest may still be on the QR screen: nothing deleted yet.
+      expect(File('${docs.path}/1.mp4').existsSync(), isTrue);
+
+      // Start screen: only the clip that is online goes; photos and print stay for "In lại".
+      expect(q.deleteUploadedClips(), 1);
+      expect(File('${docs.path}/1.mp4').existsSync(), isFalse);
+      expect(File('${docs.path}/2.mp4').existsSync(), isTrue);
+      expect(File('${docs.path}/1.jpg').existsSync(), isTrue);
+      expect(File('${docs.path}/print.jpg').existsSync(), isTrue);
+
+      // 2.mp4 goes up; the app is relaunched before the start screen: still deleted then.
+      fail = false;
+      q.retryAll();
+      await settle();
+      expect(q.items, isEmpty);
+      final again = queue()..load();
+      expect(again.deleteUploadedClips(), 1);
+      expect(File('${docs.path}/2.mp4').existsSync(), isFalse);
+      expect(again.deleteUploadedClips(), 0);
+    });
   });
 }
 
