@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../booth/print_layout.dart';
+import '../camera/grade.dart';
 import '../camera/skin_smooth.dart';
 
 /// Paper loaded in the printer (Settings → Máy in → Khổ giấy), portrait, in mm.
@@ -116,6 +117,10 @@ class BoothSettings extends ChangeNotifier {
     _prefs.setBool('externalCamera', v);
     notifyListeners();
   }
+
+  /// The colour grade under every filter (Cài đặt → Màu ảnh), for photos taken from now on.
+  PhotoGrade get grade => PhotoGrade.decode(_prefs.getString('photoGrade'));
+  set grade(PhotoGrade v) => _set('photoGrade', v.encode());
 
   SkinSmooth get skin => SkinSmooth.byName(_prefs.getString('skin'));
   set skin(SkinSmooth v) => _set('skin', v.name);

@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 
 import '../config.dart';
 import 'film_shader.dart';
+import 'grade.dart';
 import 'filters.dart';
 import 'live_recorder.dart';
 import 'ptp.dart';
@@ -58,7 +59,10 @@ class BoothCamera {
   /// ([wake] / [sleep]): left on at the start screen it heated the iPad.
   Future<bool> init(Directory tmp) async {
     _tmp = tmp;
-    shaders = await FilmShaders.load();
+    shaders = await FilmShaders.load(grade: _grade);
+    _shadersReady = true;
+    // Changed while the shaders loaded.
+    if (shaders.grade != _grade) await shaders.setGrade(_grade);
     final perms = await cam.requestPermissions();
     if (!perms.camera) return false;
     final segments = Directory(p.join(tmp.path, 'segments'))..createSync(recursive: true);
@@ -186,10 +190,28 @@ class BoothCamera {
     return Rect.fromLTWH((w - cw) / 2, (h - ch) / 2, cw, ch);
   }
 
-  /// [base] through [filter], same size.
-  Future<ui.Image> develop(ui.Image base, BoothFilter filter, String seedId) {
+  // The staff's colour grade (Cài đặt → Màu ảnh); set by Booth from the settings.
+  PhotoGrade _grade = PhotoGrade.none;
+  bool _shadersReady = false;
+  PhotoGrade get grade => _grade;
+
+  /// New photos and clips from now on use [g] (the guest's filter goes on top of it).
+  Future<void> setGrade(PhotoGrade g) async {
+    _grade = g;
+    if (_shadersReady) await shaders.setGrade(g);
+  }
+
+  /// [base] through [filter], same size. [grade]: a draft to preview instead of the saved one.
+  Future<ui.Image> develop(ui.Image base, BoothFilter filter, String seedId, {PhotoGrade? grade}) {
     final size = Size(base.width.toDouble(), base.height.toDouble());
-    return shaders.develop(base, filter, seed: seedFor(seedId), crop: Offset.zero & size, outSize: size);
+    return shaders.develop(
+      base,
+      filter,
+      seed: seedFor(seedId),
+      crop: Offset.zero & size,
+      outSize: size,
+      grade: grade,
+    );
   }
 
   /// JPEG of [img] at [outPath] (platform encoder, as in Lensly).
@@ -210,8 +232,8 @@ class BoothCamera {
     if (shot.clip.isEmpty) return Future.value(null);
     return live.export(
       [shot.clip],
-      buildLut(filter, size: kClipLutSize),
-      filter.look(seed: seedFor(seedId)),
+      buildLut(filter, size: kClipLutSize, grade: _grade),
+      filter.look(seed: seedFor(seedId), grade: _grade),
       outPath,
       mirror: true,
     );

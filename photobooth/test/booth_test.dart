@@ -288,6 +288,25 @@ void main() {
       }
     });
 
+    test('Bo góc: the photo windows get rounded corners, the middle stays the photo', () async {
+      final red = await _solid(40, 30, const Color(0xFFFF0000));
+      final frame = frames.firstWhere((f) => f.id == 'lpe_4cut_black');
+      final img = await renderPrint(
+        PrintSpec(
+          frame: frame,
+          photos: List.filled(frame.picks, red),
+          title: 'LPE Sum Up',
+          dateLine: '23.11.2026',
+          photoRadius: 60,
+        ),
+      );
+      for (final s in frame.slots) {
+        expect(await _pixel(img, s.center), 0xFFFF0000);
+        expect(await _pixel(img, s.topLeft + const Offset(4, 4)), isNot(0xFFFF0000), reason: 'rounded corner $s');
+        expect(await _pixel(img, s.topCenter + const Offset(0, 4)), 0xFFFF0000, reason: 'straight edge $s');
+      }
+    });
+
     test('custom frame: photo shows through the hole only, the PNG covers the rest', () async {
       const size = Size(1200, 1776);
       const hole = Rect.fromLTWH(100, 100, 1000, 700);

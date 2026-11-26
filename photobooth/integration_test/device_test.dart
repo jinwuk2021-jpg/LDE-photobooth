@@ -18,6 +18,7 @@ import 'package:photobooth/booth/booth.dart';
 import 'package:photobooth/booth/frames.dart';
 import 'package:photobooth/booth/print_layout.dart';
 import 'package:photobooth/camera/filters.dart';
+import 'package:photobooth/camera/grade.dart';
 import 'package:photobooth/config.dart';
 import 'package:photobooth/main.dart';
 import 'package:photobooth/screens/admin_screen.dart';
@@ -284,6 +285,29 @@ void main() {
     log('raw still ${rw}x$rh');
     expect(rw > rh ? rw : rh, greaterThan(1920), reason: 'still ${rw}x$rh');
     final base = await shot.base;
+    // Màu ảnh: a draft grade previews on the GPU; a saved one goes into every filter's LUT.
+    Future<(double, double)> meanRB(ui.Image img) async {
+      final d = (await img.toByteData())!;
+      var r = 0.0, bl = 0.0, n = 0;
+      for (var i = 0; i < d.lengthInBytes; i += 4 * 97) {
+        r += d.getUint8(i);
+        bl += d.getUint8(i + 2);
+        n++;
+      }
+      return (r / n, bl / n);
+    }
+    final f0 = BoothFilter.values.first;
+    final plain = await booth.camera.develop(base, f0, '0');
+    final warm = await booth.camera.develop(base, f0, '0', grade: const PhotoGrade(temperature: 1));
+    final (pr, pb) = await meanRB(plain);
+    final (wr, wb) = await meanRB(warm);
+    log('grade: plain R-B ${(pr - pb).toStringAsFixed(1)}, warm R-B ${(wr - wb).toStringAsFixed(1)}');
+    expect(wr - wb, greaterThan(pr - pb + 10));
+    await booth.camera.setGrade(const PhotoGrade(exposure: 0.6));
+    final bright = await booth.camera.develop(base, f0, '0');
+    final (br, _) = await meanRB(bright);
+    expect(br, greaterThan(pr + 5), reason: 'saved grade in the LUT');
+    await booth.camera.setGrade(PhotoGrade.none);
     final out = Directory(p.join(booth.docs.path, 'Booth', 'device-test'))..createSync(recursive: true);
     created.add(out);
     final developed = <ui.Image>[];

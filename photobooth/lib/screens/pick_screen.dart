@@ -321,6 +321,7 @@ class _PickScreenState extends State<PickScreen> {
                             dateLine: s.dateLine,
                             subtitle: s.subtitle,
                             scanHint: T.now.printScanHint,
+                            photoRadius: s.grade.corner,
                           ),
                         ),
                       ),

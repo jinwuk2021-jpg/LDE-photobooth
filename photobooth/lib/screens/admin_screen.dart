@@ -6,6 +6,7 @@ import '../camera/sony_camera.dart';
 import '../ui/lux.dart';
 import '../ui/sparkle.dart';
 import 'admin/camera_page.dart';
+import 'admin/color_page.dart';
 import 'admin/event_page.dart';
 import 'admin/frame_edit_page.dart';
 import 'admin/frames_page.dart';
@@ -17,7 +18,7 @@ import 'admin/printer_page.dart';
 Future<void> openAdmin(BuildContext context, Booth booth) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AdminScreen(booth: booth)));
 
-enum AdminTab { printer, camera, frames, event, history }
+enum AdminTab { printer, camera, color, frames, event, history }
 
 /// 7 · Cài đặt (design "LPE Sum Up – Photobooth", SettingsPrinter / Frames / History): a side bar
 /// with the sections and "Về màn chờ", the section on the right.
@@ -44,6 +45,7 @@ class _AdminScreenState extends State<AdminScreen> {
     Widget page() => switch (_tab) {
       AdminTab.printer => PrinterPage(booth: b),
       AdminTab.camera => CameraPage(booth: b),
+      AdminTab.color => ColorPage(booth: b),
       AdminTab.frames when _editing != null => FrameEditPage(
         booth: b,
         frame: _editing!.$1,
@@ -134,6 +136,7 @@ class _SideBar extends StatelessWidget {
           final items = [
             (AdminTab.printer, Icons.print_outlined, 'Máy in', printerDot),
             (AdminTab.camera, Icons.photo_camera_outlined, 'Máy ảnh', cameraDot),
+            (AdminTab.color, Icons.tune, 'Màu ảnh', null),
             (AdminTab.frames, Icons.image_outlined, 'Khung ảnh', null),
             (AdminTab.event, Icons.celebration_outlined, 'Sự kiện', null),
             (AdminTab.history, Icons.history, 'Lịch sử in', historyDot),

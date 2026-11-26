@@ -31,7 +31,11 @@ class PrintSpec {
     this.qrUrl,
     this.qrSlot = false,
     this.scanHint = 'Quét mã để tải ảnh & video Live →',
+    this.photoRadius = 0,
   });
+
+  /// Rounded photo windows (Cài đặt → Màu ảnh → Bo góc), in card pixels.
+  final double photoRadius;
 
   final BoothFrame frame;
   final List<ui.Image?> photos;
@@ -228,13 +232,16 @@ void paintPrint(Canvas canvas, PrintSpec spec) {
   // Photos, each with a 2 px gold outline 5 px out.
   for (var i = 0; i < frame.slots.length; i++) {
     final cell = frame.slots[i];
-    canvas.drawRect(
-      cell.inflate(6),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = gold,
-    );
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = gold;
+    if (spec.photoRadius > 0) {
+      // The outline follows the rounded photo, 6 px out.
+      canvas.drawRRect(RRect.fromRectAndRadius(cell.inflate(6), Radius.circular(spec.photoRadius + 6)), outline);
+    } else {
+      canvas.drawRect(cell.inflate(6), outline);
+    }
     _photo(canvas, spec, i, gold);
   }
 
@@ -263,8 +270,14 @@ void _paintCustom(Canvas canvas, PrintSpec spec, ui.Image overlay) {
 /// Window [i]: the photo (cover-cropped), or an empty numbered window on previews.
 void _photo(Canvas canvas, PrintSpec spec, int i, Color gold, {double bleed = 0}) {
   final cell = spec.frame.slots[i].inflate(bleed);
-  canvas.drawRect(cell, Paint()..color = const Color(0xFF17141C));
   final img = spec.photos.length > i ? spec.photos[i] : null;
+  final round = img != null && spec.photoRadius > 0;
+  canvas.save();
+  if (round) {
+    canvas.clipRRect(RRect.fromRectAndRadius(cell, Radius.circular(spec.photoRadius)), doAntiAlias: true);
+  } else {
+    canvas.drawRect(cell, Paint()..color = const Color(0xFF17141C));
+  }
   if (img == null) {
     _text(
       canvas,
@@ -276,6 +289,7 @@ void _photo(Canvas canvas, PrintSpec spec, int i, Color gold, {double bleed = 0}
   } else {
     coverRect(canvas, img, cell);
   }
+  canvas.restore();
 }
 
 void _qr(Canvas canvas, PrintSpec spec, Color gold) {

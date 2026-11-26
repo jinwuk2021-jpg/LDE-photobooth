@@ -15,6 +15,7 @@ import 'package:photobooth/booth/booth.dart';
 import 'package:photobooth/booth/frames.dart';
 import 'package:photobooth/booth/print_layout.dart';
 import 'package:photobooth/camera/booth_camera.dart';
+import 'package:photobooth/camera/grade.dart';
 import 'package:photobooth/camera/ptp.dart';
 import 'package:photobooth/screens/admin/kit.dart';
 import 'package:photobooth/screens/admin_screen.dart';
@@ -224,6 +225,27 @@ void main() {
       expect(find.text('Chọn file PNG khung'), findsOneWidget);
       await t.tap(find.text('Huỷ'));
       await settle(t);
+
+      // Màu ảnh: a slider moves the draft; "Áp dụng" saves it and the camera takes it.
+      await t.tap(find.text('Màu ảnh').first);
+      await settle(t);
+      await shot(t, '2b-mau-anh');
+      expect(find.text('Màu gốc'), findsOneWidget);
+      await t.drag(find.byType(Slider).at(5), const Offset(80, 0)); // Nhiệt độ → warmer
+      await settle(t);
+      expect(find.text('Chưa áp dụng'), findsOneWidget);
+      expect(b.settings.grade.isNeutral, isTrue, reason: 'nothing saved before "Áp dụng"');
+      await t.tap(find.text('Áp dụng'));
+      await settle(t);
+      expect(b.settings.grade.temperature, greaterThan(0));
+      expect(b.camera.grade, b.settings.grade);
+      expect(find.text('Đang áp dụng'), findsOneWidget);
+      await shot(t, '2c-mau-anh-ap-dung');
+      await t.tap(find.text('Đặt lại'));
+      await t.pump();
+      await t.tap(find.text('Áp dụng'));
+      await settle(t);
+      expect(b.settings.grade, PhotoGrade.none);
 
       // History: delete one guest (asked first), then "Dọn máy" clears the rest (all online).
       await t.tap(find.text('Lịch sử in').first);

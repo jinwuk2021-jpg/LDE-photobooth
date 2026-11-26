@@ -72,7 +72,14 @@ class Booth {
     required this.uploads,
     required this.prints,
     required this.frames,
-  });
+  }) {
+    // The colour grade follows the settings (saved in Cài đặt → Màu ảnh).
+    unawaited(camera.setGrade(settings.grade));
+    settings.addListener(() {
+      final g = settings.grade;
+      if (g != camera.grade) unawaited(camera.setGrade(g));
+    });
+  }
 
   final Directory docs;
   final BoothSettings settings;
@@ -143,6 +150,7 @@ class Booth {
         subtitle: settings.subtitle,
         qrUrl: url,
         scanHint: T.now.printScanHint,
+        photoRadius: settings.grade.corner,
       ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);

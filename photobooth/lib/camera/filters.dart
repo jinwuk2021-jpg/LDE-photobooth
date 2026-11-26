@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:film_camera/film_camera.dart' show FilmLook, LutData;
 
+import 'grade.dart';
+
 // Copied from Lensly lib/camera/film_stock.dart: the recipe, gradeColor and the
 // LUT helpers are unchanged; only the six bright / pink stocks are kept.
 
@@ -147,10 +149,10 @@ enum BoothFilter {
 
   /// Grain / vignette / halation / light leak for the native clip export. [seed]: the one the
   /// still was developed with ([seedFor]), so the leak lands on the same edge.
-  FilmLook look({double seed = 0}) => FilmLook(
+  FilmLook look({double seed = 0, PhotoGrade grade = PhotoGrade.none}) => FilmLook(
     grain: recipe.grain,
     grainSize: recipe.grainSize,
-    vignette: recipe.vignette,
+    vignette: (recipe.vignette + grade.vignette).clamp(0.0, 1.0),
     halation: recipe.halation,
     leak: recipe.leak,
     seed: seed,
@@ -204,14 +206,17 @@ List<double> gradeColor(FilmRecipe r, double red, double green, double blue) {
   return c;
 }
 
-/// size³ RGB entries, red fastest.
-LutData buildLut(BoothFilter filter, {int size = kLutSize}) {
+/// size³ RGB entries, red fastest. [grade]: the staff's colour grade, applied before the filter.
+LutData buildLut(BoothFilter filter, {int size = kLutSize, PhotoGrade grade = PhotoGrade.none}) {
   final out = Float32List(size * size * size * 3);
+  final graded = !grade.colourNeutral;
   var k = 0;
   for (var b = 0; b < size; b++) {
     for (var g = 0; g < size; g++) {
       for (var r = 0; r < size; r++) {
-        final c = gradeColor(filter.recipe, r / (size - 1), g / (size - 1), b / (size - 1));
+        var rgb = [r / (size - 1), g / (size - 1), b / (size - 1)];
+        if (graded) rgb = grade.apply(rgb[0], rgb[1], rgb[2]);
+        final c = gradeColor(filter.recipe, rgb[0], rgb[1], rgb[2]);
         out[k++] = c[0];
         out[k++] = c[1];
         out[k++] = c[2];
