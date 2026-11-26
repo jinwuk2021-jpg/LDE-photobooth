@@ -152,7 +152,7 @@ class PrintQueue extends ChangeNotifier {
     path,
     fill: fill,
     paper: _settings.printPaper,
-    direct: _settings.printFast && fill && _settings.printPaper == PrintPaper.postcard,
+    direct: _settings.printFast && _settings.printPaper == PrintPaper.postcard,
   );
 
   /// The newest finished job's send time (Settings → Máy in shows it).
@@ -347,10 +347,11 @@ class PrintQueue extends ChangeNotifier {
       // A printer that never answers (out of paper, switched off mid-job) must not stop the queue,
       // and nothing thrown may leave the job stuck on "printing".
       try {
+        // Always borderless: the card covers a sheet of its own shape (postcard), else fits inside.
         error = await (_send ?? _toPrinter)(
           url,
           file,
-          _settings.printFill,
+          true,
         ).then<String?>((v) => v).timeout(printTimeout, onTimeout: () => _timeoutError);
       } catch (e) {
         error = '$e';

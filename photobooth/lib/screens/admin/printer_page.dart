@@ -294,33 +294,21 @@ class _PrinterPageState extends State<PrinterPage> {
           ),
           OptRow(
             label: 'Gửi in nhanh',
-            hint: s.printPaper == PrintPaper.postcard && s.printFill
+            hint: s.printPaper == PrintPaper.postcard
                 ? 'Gửi thẳng file ảnh (nhẹ, nhanh). Nếu in ra lệch / có viền lạ thì tắt'
                       '${q.lastSendTime == null ? '' : ' · lần gần nhất ${q.lastSendTime!.inSeconds} giây'}'
-                : 'Chỉ dùng cho Postcard + Tràn lề',
+                : 'Chỉ dùng cho khổ Postcard',
             trailing: GoldToggle(value: s.printFast, onChanged: (v) => s.printFast = v),
           ),
           OptRow(
             label: 'Khổ giấy',
-            hint: 'Postcard 100×148 (SELPHY) · 2L 127×178 · L 89×127',
+            hint: 'Postcard 100×148 (SELPHY, in tràn lề) · 2L 127×178 · L 89×127 (nằm trọn trong giấy)',
+            last: true,
             stacked: true,
             trailing: GoldSegments<PrintPaper>(
               options: [for (final p in PrintPaper.values) (p, p.label)],
               value: s.printPaper,
               onChanged: (v) => s.printPaper = v,
-            ),
-          ),
-          OptRow(
-            label: 'Kiểu in',
-            hint: s.printFill
-                ? 'Phủ kín tờ giấy khi giấy đúng tỉ lệ tấm in (Postcard); khổ khác vẫn nằm trọn trong giấy'
-                : 'Nằm trọn trong vùng in, có viền',
-            last: true,
-            stacked: true,
-            trailing: GoldSegments<bool>(
-              options: const [(true, 'Tràn lề'), (false, 'Có viền')],
-              value: s.printFill,
-              onChanged: (v) => s.printFill = v,
             ),
           ),
         ],

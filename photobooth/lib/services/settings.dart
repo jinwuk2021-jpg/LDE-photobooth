@@ -91,12 +91,6 @@ class BoothSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get printFill => _prefs.getBool('printFill') ?? true;
-  set printFill(bool v) {
-    _prefs.setBool('printFill', v);
-    notifyListeners();
-  }
-
   /// Colour richness of the printer copy (SELPHY prints run pale). Default: Đậm.
   PrintColor get printColor => PrintColor.byName(_prefs.getString('printColor'));
   set printColor(PrintColor v) => _set('printColor', v.name);

@@ -43,7 +43,7 @@ không phản hồi sau 3 phút) thì **dừng ở đó, chỉ báo Lỗi** kèm
 thường. App **không bao giờ tự in lại**. Kiểm tra khay giấy, tấm nào chưa ra thật thì bấm **In lại** (hoặc
 **Thử lại lỗi** cho tất cả).
 
-Tốc độ: **Máy in → Gửi in nhanh** (bật sẵn, cho Postcard + Tràn lề) gửi thẳng file ảnh sang máy in thay vì để iPad
+Tốc độ: **Máy in → Gửi in nhanh** (bật sẵn, cho khổ Postcard) gửi thẳng file ảnh sang máy in thay vì để iPad
 dựng lại cả trang, nên SELPHY nhận dữ liệu nhanh hơn. Lịch sử in ghi số giây gửi của mỗi lượt ("Đã in ×1 · 12s").
 Nếu bản in bị lệch hay có viền lạ khi bật, tắt nó đi và báo lại.
 
@@ -55,7 +55,7 @@ Trang **Máy in** → **In thử** → chọn khung, hoặc trang **Khung ảnh*
 |---|---|---|---|---|
 | In ra mà **không** hiện hộp thoại nào trên iPad | | | | |
 | Đúng khổ postcard, không bị thu nhỏ hay chừa lề trắng lạ | | | | |
-| Có viền trắng hay tràn lề (ghi lại) | | | | |
+| In tràn lề, không có viền trắng quanh ảnh | | | | |
 | Mép bị cắt bao nhiêu (đường khung mảnh sát mép bị cắt cũng không sao) | | | | |
 | QR và chữ còn nguyên, không bị cắt | | | | |
 | **4 Cut** nằm đúng chiều, không bị xoay 2 lần | – | – | | – |
@@ -68,8 +68,7 @@ Tấm in thử có QR trỏ tới một link giả (`.../b/testtesttest`): trang
 
 | Thấy gì | Chỉnh |
 |---|---|
-| Có viền trắng quanh ảnh | **Kiểu in: Tràn lề** (mặc định) |
-| Bị cắt mất chữ hoặc QR ở mép | **Kiểu in: Có viền** |
+| Có viền trắng quanh ảnh (khổ Postcard) | tắt **Gửi in nhanh** rồi in thử lại; vẫn còn thì báo lại |
 | In ra bị phóng to, mất mép / bị xoay | **Máy in → Khi in → Khổ giấy** chọn đúng giấy đang lắp (SELPHY: Postcard; máy in ảnh: 2L hoặc L) |
 | Màu in ra nhạt, thiếu đậm | thẻ **Màu tấm in** → **Độ đậm màu: Rất đậm** (mặc định là Đậm) |
 | Màu quá gắt, da bị đỏ / cam | **Độ đậm màu: Vừa** |
@@ -111,8 +110,8 @@ Nếu chỉnh ở mục 3b vẫn chưa ổn, Claude có thể chỉnh thêm:
 ## Ghi chú kỹ thuật
 
 - App gửi lệnh in qua `UIPrintInteractionController` tới máy in đã chọn (`UIPrinter(url:)`), loại ảnh `.photo`, khổ dọc,
-  khổ giấy 283.5 × 419.5 pt (100×148 mm). App tự vẽ trang in (`PhotoPageRenderer`): "Tràn lề" phủ kín cả tờ giấy,
-  "Có viền" nằm trọn trong vùng máy in in được. Lệnh in đi lần lượt từng cái: lệnh sau chỉ gửi khi lệnh trước đã báo xong
+  khổ giấy 283.5 × 419.5 pt (100×148 mm). Luôn in tràn lề (không còn tuỳ chọn "Có viền"): giấy
+  cùng tỉ lệ tấm in (Postcard) thì tấm in phủ kín tờ giấy, khổ khác (2L, L) thì nằm trọn trong vùng in, không bị cắt. Lệnh in đi lần lượt từng cái: lệnh sau chỉ gửi khi lệnh trước đã báo xong
   hoặc đã quá 3 phút.
 - File gửi máy in: `Booth/<ngày>/<giờ>/print.jpg` (4 Cut dùng `print_may_in.jpg`, đã xoay dọc). In thử nằm trong `Booth/in-thu/`.
 - Code: `ios/Runner/AppDelegate.swift` (phần native), `lib/services/printer.dart` (hàng đợi in).
