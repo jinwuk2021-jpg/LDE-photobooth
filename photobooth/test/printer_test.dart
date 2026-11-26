@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:fake_async/fake_async.dart';
@@ -86,7 +87,7 @@ void main() {
     });
   });
 
-  test('a refused job is retried by itself 3 times (15 / 30 / 60 s), then shows as failed', () {
+  test('a refused job is never resent by itself (it may still have printed); "In lại" sends it once', () {
     fakeAsync((async) {
       var sends = 0;
       final q = PrintQueue(
@@ -96,31 +97,80 @@ void main() {
         reachable: (_) async => true,
         send: (_, _, _) async {
           sends++;
-          return 'Hết giấy';
+          return 'Máy in không nhận lệnh';
         },
-      );
+      )..start(watchLifecycle: false);
       q.add(card('a.jpg'));
       async.flushMicrotasks();
       expect(sends, 1);
-      expect(q.jobs.single.status, JobStatus.waiting);
-      async.elapse(const Duration(seconds: 15));
-      expect(sends, 2);
-      async.elapse(const Duration(seconds: 30));
-      expect(sends, 3);
-      async.elapse(const Duration(seconds: 59));
-      expect(sends, 3);
-      async.elapse(const Duration(seconds: 1));
-      expect(sends, 4);
       expect(q.jobs.single.status, JobStatus.failed);
-      expect(q.jobs.single.error, 'Hết giấy');
+      expect(q.jobs.single.error, 'Máy in không nhận lệnh');
+      // The watchdog keeps finding the printer: still nothing more comes out.
       async.elapse(const Duration(minutes: 10));
-      expect(sends, 4);
-      // "In lại" in admin: a fresh go.
+      expect(sends, 1);
       q.retry(q.jobs.single);
       async.flushMicrotasks();
-      expect(sends, 5);
+      expect(sends, 2);
+      async.elapse(const Duration(minutes: 10));
+      expect(sends, 2);
       q.dispose();
     });
+  });
+
+  test('printer back after a long time: old waiting jobs are not printed by themselves', () {
+    fakeAsync((async) {
+      final t0 = DateTime(2026, 12, 23, 20);
+      var online = false;
+      final sent = <String>[];
+      final q = PrintQueue(
+        prefs,
+        settings,
+        docs,
+        now: () => t0.add(async.elapsed),
+        reachable: (_) async => online,
+        send: (_, path, _) async {
+          sent.add(path.split('/').last);
+          return null;
+        },
+      )..start(watchLifecycle: false);
+      q.add(card('old.jpg'));
+      async.elapse(const Duration(minutes: 10));
+      q.add(card('recent.jpg'));
+      async.elapse(const Duration(minutes: 10));
+      // Switched on 20 min after the first job, 10 min after the second.
+      online = true;
+      async.elapse(PrintQueue.offlineEvery);
+      expect(sent, ['recent.jpg']);
+      final old = q.jobs.firstWhere((j) => j.path.endsWith('old.jpg'));
+      expect(old.status, JobStatus.failed);
+      expect(old.error, PrintQueue.tooLate);
+      // Staff still can.
+      q.retry(old);
+      async.flushMicrotasks();
+      expect(sent, ['recent.jpg', 'old.jpg']);
+      q.dispose();
+    });
+  });
+
+  test('a relaunch never prints yesterday\'s waiting jobs', () async {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final path = card('y.jpg');
+    await prefs.setString('printJobs', jsonEncode([PrintJob(path: path.split('/').last, created: yesterday).toJson()]));
+    var sends = 0;
+    final q = PrintQueue(
+      prefs,
+      settings,
+      docs,
+      reachable: (_) async => true,
+      send: (_, _, _) async {
+        sends++;
+        return null;
+      },
+    )..load();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(sends, 0);
+    expect(q.jobs.single.status, JobStatus.failed);
+    expect(q.jobs.single.error, PrintQueue.tooLate);
   });
 
   test('a job that timed out is not resent (it may have printed)', () {
@@ -187,10 +237,12 @@ void main() {
   test('jobs whose picture is gone are dropped, at launch and when their turn comes', () async {
     // Saved by an earlier run: one card still there, two deleted (a cleaned-up test session).
     final kept = card('kept.jpg');
-    await prefs.setString('printJobs', '[${[
-      for (final (name, status) in [('gone1.jpg', 'failed'), ('kept.jpg', 'failed'), ('gone2.jpg', 'waiting')])
-        '{"path":"$name","created":"2026-11-26T00:45:35.000","status":"$status"}',
-    ].join(',')}]');
+    await prefs.setString(
+      'printJobs',
+      '[${[
+        for (final (name, status) in [('gone1.jpg', 'failed'), ('kept.jpg', 'failed'), ('gone2.jpg', 'waiting')]) '{"path":"$name","created":"2026-11-26T00:45:35.000","status":"$status"}',
+      ].join(',')}]',
+    );
     final sent = <String>[];
     var online = true;
     final q = PrintQueue(

@@ -37,8 +37,10 @@ Mở admin: giữ nút bánh răng ⚙ ở góc trên bên phải màn chờ 3 g
 
 App tự giữ kết nối: hỏi máy in mỗi 15 giây khi không thấy (mỗi 60 giây khi đang ổn), và hỏi lại ngay khi mở
 lại app. Nếu máy in mất kết nối lúc khách bấm in, tấm đó **không bị mất**: nằm chờ ("Đang chờ máy in kết nối lại")
-và tự in khi máy in có lại. Máy in báo lỗi (hết giấy, kẹt giấy…) thì app tự thử lại 3 lần (sau 15, 30, 60 giây)
-rồi mới báo **Lỗi** trong trang **Lịch sử in**; khi đó sửa máy in rồi bấm **Thử lại lỗi** (hoặc **In lại** ở lượt đó).
+và tự in khi máy in có lại, **nếu chờ chưa quá 15 phút**. Tấm chờ lâu hơn (vd. in thử lúc máy in tắt, hay từ hôm trước)
+không tự in nữa, để bật máy in lên không ra tấm thừa; nó hiện "Chưa in" trong **Lịch sử in**, cần thì bấm **In lại**.
+Tấm đã gửi sang máy in mà iOS báo lỗi (hết giấy, kẹt giấy…) **không tự gửi lại** (có khi tờ đó vẫn ra, gửi lại là in
+đôi): app báo **Lỗi** trong **Lịch sử in**; kiểm tra khay giấy, tấm chưa ra thật thì bấm **In lại** (hoặc **Thử lại lỗi**).
 
 ## 3. In thử từng khung (ghi lại kết quả)
 

@@ -51,7 +51,14 @@ abstract final class PrinterChannel {
 enum JobStatus { waiting, printing, done, failed }
 
 class PrintJob {
-  PrintJob({required this.path, required this.created, this.status = JobStatus.waiting, this.error, this.attempts = 0});
+  PrintJob({
+    required this.path,
+    required this.created,
+    this.status = JobStatus.waiting,
+    this.error,
+    this.attempts = 0,
+    DateTime? queuedAt,
+  }) : queuedAt = queuedAt ?? created;
 
   factory PrintJob.fromJson(Map<String, Object?> j) => PrintJob(
     path: j['path']! as String,
@@ -64,6 +71,7 @@ class PrintJob {
     },
     error: j['error'] as String?,
     attempts: (j['attempts'] as num?)?.toInt() ?? 0,
+    queuedAt: DateTime.tryParse(j['queued'] as String? ?? ''),
   );
 
   /// The print JPEG, relative to the documents directory (`Booth/<day>/<time>/print.jpg`).
@@ -74,11 +82,12 @@ class PrintJob {
   /// Why it failed, or (while waiting) why it has not gone yet.
   String? error;
 
-  /// Times it was sent and refused (drives the automatic retries).
+  /// Times it was handed to the printer.
   int attempts;
 
-  /// Held back after a refusal until its retry timer fires. In memory only: a relaunch tries at once.
-  bool held = false;
+  /// When it was last put in the queue (added, or "In lại"): a job left waiting longer than
+  /// [PrintQueue.maxWait] is not printed by itself any more.
+  DateTime queuedAt;
 
   Map<String, Object?> toJson() => {
     'path': path,
@@ -86,6 +95,7 @@ class PrintJob {
     'status': status.name,
     'error': error,
     'attempts': attempts,
+    'queued': queuedAt.toIso8601String(),
   };
 }
 
@@ -98,8 +108,12 @@ class PrintJob {
 ///   [onlineEvery] while it does), from launch on, and again when the app comes back to the front;
 /// - a job is only sent once the printer answers; until then it waits (never lost, never failed)
 ///   and goes as soon as the printer is back;
-/// - a job the printer refuses is retried by itself [autoRetries] times (15 s, 30 s, 60 s apart)
-///   before it shows as failed in admin. A job that timed out is not: it may have printed.
+/// - a job is never sent twice by itself: once handed to the printer it is done, or failed
+///   (iOS may report an error for a sheet that still comes out, e.g. right after the printer
+///   wakes, so an automatic resend printed doubles). Staff resend with "In lại" / "Thử lại lỗi";
+/// - a job that waited longer than [maxWait] for the printer is not printed by itself (the
+///   guest is long gone; a test print from yesterday must not come out when the printer is
+///   switched on): it shows as not printed, "In lại" sends it.
 class PrintQueue extends ChangeNotifier {
   PrintQueue(
     this._prefs,
@@ -107,13 +121,18 @@ class PrintQueue extends ChangeNotifier {
     this.docs, {
     Future<bool> Function(String url)? reachable,
     Future<String?> Function(String url, String path, bool fill)? send,
-  }) : _reachable = reachable ?? PrinterChannel.reachable,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now,
+       _reachable = reachable ?? PrinterChannel.reachable,
        // A named parameter cannot be a private initializing formal.
        // ignore: prefer_initializing_formals
        _send = send;
 
   final SharedPreferences _prefs;
   final Directory docs;
+
+  /// The clock (tests move it).
+  final DateTime Function() _now;
   final BoothSettings _settings;
   final Future<bool> Function(String url) _reachable;
 
@@ -125,13 +144,14 @@ class PrintQueue extends ChangeNotifier {
   final List<PrintJob> _jobs = [];
   bool _busy = false;
   Timer? _watchdog;
-  final Set<Timer> _retryTimers = {};
   AppLifecycleListener? _lifecycle;
 
   static const offlineEvery = Duration(seconds: 15);
   static const onlineEvery = Duration(seconds: 60);
-  static const autoRetries = 3;
-  static const retryBase = Duration(seconds: 15);
+
+  /// Longest a job waits for an absent printer and still prints by itself.
+  static const maxWait = Duration(minutes: 15);
+  static const tooLate = 'Chưa in: máy in vắng quá 15 phút. Bấm In lại nếu vẫn cần';
   static const contactTimeout = Duration(seconds: 12);
   static const printTimeout = Duration(minutes: 3);
   static const _timeoutError = 'Máy in không phản hồi sau 3 phút';
@@ -186,9 +206,6 @@ class PrintQueue extends ChangeNotifier {
   @override
   void dispose() {
     _watchdog?.cancel();
-    for (final t in _retryTimers) {
-      t.cancel();
-    }
     _lifecycle?.dispose();
     super.dispose();
   }
@@ -197,7 +214,7 @@ class PrintQueue extends ChangeNotifier {
   PrintJob add(String absolutePath) {
     final job = PrintJob(
       path: p.relative(absolutePath, from: docs.path),
-      created: DateTime.now(),
+      created: _now(),
     );
     _jobs.add(job);
     _save();
@@ -208,13 +225,12 @@ class PrintQueue extends ChangeNotifier {
   /// Printing was switched on (or a printer picked): send what is waiting.
   void resume() => _pump();
 
-  /// "In lại" in admin: sends it now, with a fresh set of automatic retries.
+  /// "In lại" in admin: sends it again now.
   void retry(PrintJob job) {
     job
       ..status = JobStatus.waiting
       ..error = null
-      ..attempts = 0
-      ..held = false;
+      ..queuedAt = _now();
     _save();
     _pump();
   }
@@ -249,8 +265,7 @@ class PrintQueue extends ChangeNotifier {
       j
         ..status = JobStatus.waiting
         ..error = null
-        ..attempts = 0
-        ..held = false;
+        ..queuedAt = _now();
     }
     _save();
     _pump();
@@ -274,7 +289,18 @@ class PrintQueue extends ChangeNotifier {
 
   Future<void> _pump() async {
     if (_busy || !_settings.printing) return;
-    final job = _jobs.where((j) => j.status == JobStatus.waiting && !j.held).firstOrNull;
+    // Waited too long for the printer: not printed by itself (shown, "In lại" sends it).
+    var expired = false;
+    for (final j in _jobs.where((j) => j.status == JobStatus.waiting)) {
+      if (_now().difference(j.queuedAt) > maxWait) {
+        j
+          ..status = JobStatus.failed
+          ..error = tooLate;
+        expired = true;
+      }
+    }
+    if (expired) _save();
+    final job = _jobs.where((j) => j.status == JobStatus.waiting).firstOrNull;
     if (job == null) return;
     final url = _settings.printerUrl;
     final file = p.join(docs.path, job.path);
@@ -316,28 +342,10 @@ class PrintQueue extends ChangeNotifier {
       }
       job.attempts++;
     }
-    final retryable = error != null && url != null && error != _timeoutError && job.attempts > 0;
-    if (error == null) {
-      job
-        ..status = JobStatus.done
-        ..error = null;
-    } else if (retryable && job.attempts <= autoRetries) {
-      job
-        ..status = JobStatus.waiting
-        ..error = '$error · tự thử lại (${job.attempts}/$autoRetries)'
-        ..held = true;
-      late final Timer t;
-      t = Timer(retryBase * (1 << (job.attempts - 1)), () {
-        _retryTimers.remove(t);
-        job.held = false;
-        _pump();
-      });
-      _retryTimers.add(t);
-    } else {
-      job
-        ..status = JobStatus.failed
-        ..error = error;
-    }
+    // Never resent by itself: a sheet iOS calls failed may still have come out.
+    job
+      ..status = error == null ? JobStatus.done : JobStatus.failed
+      ..error = error;
     printerOk = error == null;
     _busy = false;
     _save();
