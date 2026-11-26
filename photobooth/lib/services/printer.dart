@@ -22,10 +22,22 @@ abstract final class PrinterChannel {
   }
 
   /// Prints the image at [path] on [url] without any dialog. Null when done, else the error.
-  /// [fill]: cover the whole sheet (borderless) instead of fitting the printable area.
-  static Future<String?> printFile(String url, String path, {bool fill = true}) async {
+  /// [fill]: cover the whole sheet (borderless) instead of fitting the printable area (only
+  /// honoured when the sheet has the card's shape). [paper]: the paper asked of the printer.
+  static Future<String?> printFile(
+    String url,
+    String path, {
+    bool fill = true,
+    PrintPaper paper = PrintPaper.postcard,
+  }) async {
     try {
-      return await _ch.invokeMethod<String>('print', {'url': url, 'path': path, 'fill': fill});
+      return await _ch.invokeMethod<String>('print', {
+        'url': url,
+        'path': path,
+        'fill': fill,
+        'paperW': paper.widthMm,
+        'paperH': paper.heightMm,
+      });
     } on PlatformException catch (e) {
       return e.message ?? e.code;
     }
@@ -96,13 +108,18 @@ class PrintQueue extends ChangeNotifier {
     Future<bool> Function(String url)? reachable,
     Future<String?> Function(String url, String path, bool fill)? send,
   }) : _reachable = reachable ?? PrinterChannel.reachable,
-       _send = send ?? ((url, path, fill) => PrinterChannel.printFile(url, path, fill: fill));
+       _send = send;
 
   final SharedPreferences _prefs;
   final Directory docs;
   final BoothSettings _settings;
   final Future<bool> Function(String url) _reachable;
-  final Future<String?> Function(String url, String path, bool fill) _send;
+
+  /// Tests send through this; null = the real printer ([_toPrinter]).
+  final Future<String?> Function(String url, String path, bool fill)? _send;
+
+  Future<String?> _toPrinter(String url, String path, bool fill) =>
+      PrinterChannel.printFile(url, path, fill: fill, paper: _settings.printPaper);
   final List<PrintJob> _jobs = [];
   bool _busy = false;
   Timer? _watchdog;
@@ -215,9 +232,10 @@ class PrintQueue extends ChangeNotifier {
 
   Future<bool> _ask(String url) async {
     final sw = Stopwatch()..start();
-    final ok = await _reachable(
-      url,
-    ).then<bool>((v) => v).timeout(contactTimeout, onTimeout: () => false).catchError((_) => false);
+    final ok = await _reachable(url)
+        .then<bool>((v) => v)
+        .timeout(contactTimeout, onTimeout: () => false)
+        .catchError((_) => false);
     if (ok) lastLatency = sw.elapsed;
     return ok;
   }
@@ -285,7 +303,7 @@ class PrintQueue extends ChangeNotifier {
       // A printer that never answers (out of paper, switched off mid-job) must not stop the queue,
       // and nothing thrown may leave the job stuck on "printing".
       try {
-        error = await _send(
+        error = await (_send ?? _toPrinter)(
           url,
           file,
           _settings.printFill,

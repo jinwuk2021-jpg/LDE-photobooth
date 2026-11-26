@@ -31,8 +31,11 @@ import UniformTypeIdentifiers
 /// AirPrint without any dialog (lib/services/printer.dart): the printer is picked once with
 /// UIPrinterPickerController, then every job goes straight to UIPrinter(url:).
 final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerDelegate {
-  /// 100 × 148 mm postcard in points.
+  /// 100 × 148 mm postcard in points (the SELPHY's paper; used when Dart sends no size).
   private static let postcard = CGSize(width: 283.5, height: 419.5)
+
+  /// Paper asked for by the current job (Settings → Khổ giấy), portrait, in points.
+  private var paperSize = BoothPrinter.postcard
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "booth/printer", binaryMessenger: registrar.messenger())
@@ -45,6 +48,14 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
     case "pick":
       pick(result)
     case "print":
+      // Paper in mm from Dart ("paperW", "paperH"), e.g. 127 × 178 for 2L.
+      if let w = (args["paperW"] as? NSNumber)?.doubleValue, let h = (args["paperH"] as? NSNumber)?.doubleValue,
+        w > 0, h > 0
+      {
+        paperSize = CGSize(width: min(w, h) * 72 / 25.4, height: max(w, h) * 72 / 25.4)
+      } else {
+        paperSize = Self.postcard
+      }
       printFile(
         url: args["url"] as? String ?? "", path: args["path"] as? String ?? "", fill: args["fill"] as? Bool ?? true,
         result: result)
@@ -97,7 +108,7 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
   func printInteractionController(
     _ printInteractionController: UIPrintInteractionController, choosePaper paperList: [UIPrintPaper]
   ) -> UIPrintPaper {
-    UIPrintPaper.bestPaper(forPageSize: Self.postcard, withPapersFrom: paperList)
+    UIPrintPaper.bestPaper(forPageSize: paperSize, withPapersFrom: paperList)
   }
 
   static func topViewController() -> UIViewController? {
@@ -108,7 +119,12 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
   }
 }
 
-/// One page: [image] aspect-filled over the whole sheet ([fill]) or aspect-fitted into the printable area.
+/// One page: the whole card on the sheet, whatever paper the printer reports.
+/// - Turned a quarter when the sheet and the card point different ways (a printer may report 2L
+///   as 178 × 127, i.e. landscape: filling that with a portrait card blew it up ~2× and cut it).
+/// - [fill] (borderless) covers the sheet only when the sheet has the card's shape (within 3 %,
+///   e.g. postcard on the SELPHY), where just the bleed is trimmed. Any other paper (2L, L) gets
+///   the card fitted inside the printable area, centred, so nothing is cut off.
 final class PhotoPageRenderer: UIPrintPageRenderer {
   private let image: UIImage
   private let fill: Bool
@@ -122,14 +138,27 @@ final class PhotoPageRenderer: UIPrintPageRenderer {
   override var numberOfPages: Int { 1 }
 
   override func drawPage(at pageIndex: Int, in printableRect: CGRect) {
-    let target = fill ? paperRect : printableRect
     let size = image.size
-    guard size.width > 0, size.height > 0, target.width > 0, target.height > 0 else { return }
-    let scale = fill
-      ? max(target.width / size.width, target.height / size.height)
-      : min(target.width / size.width, target.height / size.height)
+    let sheet = paperRect
+    guard size.width > 0, size.height > 0, sheet.width > 0, sheet.height > 0,
+      let ctx = UIGraphicsGetCurrentContext()
+    else { return }
+    // The card as it lands on the sheet: turned when the two point different ways.
+    let turn = (sheet.width > sheet.height) != (size.width > size.height)
+    let cardW = turn ? size.height : size.width, cardH = turn ? size.width : size.height
+    let sameShape = abs((sheet.width / sheet.height) / (cardW / cardH) - 1) < 0.03
+    let useFill = fill && sameShape
+    let target = useFill ? sheet : printableRect
+    guard target.width > 0, target.height > 0 else { return }
+    let scale = useFill
+      ? max(target.width / cardW, target.height / cardH)
+      : min(target.width / cardW, target.height / cardH)
     let w = size.width * scale, h = size.height * scale
-    image.draw(in: CGRect(x: target.midX - w / 2, y: target.midY - h / 2, width: w, height: h))
+    ctx.saveGState()
+    ctx.translateBy(x: target.midX, y: target.midY)
+    if turn { ctx.rotate(by: .pi / 2) }
+    image.draw(in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
+    ctx.restoreGState()
   }
 }
 

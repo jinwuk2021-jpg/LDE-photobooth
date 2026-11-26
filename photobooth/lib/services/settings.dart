@@ -4,6 +4,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../booth/print_layout.dart';
 import '../camera/skin_smooth.dart';
 
+/// Paper loaded in the printer (Settings → Máy in → Khổ giấy), portrait, in mm.
+enum PrintPaper {
+  postcard('Postcard', 100, 148),
+  l2('2L', 127, 178),
+  l('L', 89, 127);
+
+  const PrintPaper(this.label, this.widthMm, this.heightMm);
+  final String label;
+  final double widthMm;
+  final double heightMm;
+
+  static PrintPaper byName(String? name) => values.firstWhere((v) => v.name == name, orElse: () => PrintPaper.postcard);
+}
+
 /// What the staff can change in the admin screen. Kept across launches.
 class BoothSettings extends ChangeNotifier {
   BoothSettings(this._prefs);
@@ -58,6 +72,10 @@ class BoothSettings extends ChangeNotifier {
   }
 
   /// Picture covers the whole sheet (borderless) instead of fitting the printable area.
+  /// The paper the printer is asked for (SELPHY: Postcard; photo printers: 2L / L).
+  PrintPaper get printPaper => PrintPaper.byName(_prefs.getString('printPaper'));
+  set printPaper(PrintPaper v) => _set('printPaper', v.name);
+
   bool get printFill => _prefs.getBool('printFill') ?? true;
   set printFill(bool v) {
     _prefs.setBool('printFill', v);

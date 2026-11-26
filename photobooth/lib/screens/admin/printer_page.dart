@@ -7,6 +7,7 @@ import '../../booth/booth.dart';
 import '../../booth/frames.dart';
 import '../../booth/print_layout.dart';
 import '../../services/printer.dart';
+import '../../services/settings.dart';
 import '../../ui/lux.dart';
 import 'kit.dart';
 
@@ -282,8 +283,20 @@ class _PrinterPageState extends State<PrinterPage> {
             trailing: GoldStepper(value: s.printCopies, min: 1, max: 3, onChanged: (v) => s.printCopies = v),
           ),
           OptRow(
+            label: 'Khổ giấy',
+            hint: 'Postcard 100×148 (SELPHY) · 2L 127×178 · L 89×127',
+            stacked: true,
+            trailing: GoldSegments<PrintPaper>(
+              options: [for (final p in PrintPaper.values) (p, p.label)],
+              value: s.printPaper,
+              onChanged: (v) => s.printPaper = v,
+            ),
+          ),
+          OptRow(
             label: 'Kiểu in',
-            hint: s.printFill ? 'Ảnh phủ kín tờ giấy' : 'Nằm trọn trong vùng in, có viền',
+            hint: s.printFill
+                ? 'Phủ kín tờ giấy khi giấy đúng tỉ lệ tấm in (Postcard); khổ khác vẫn nằm trọn trong giấy'
+                : 'Nằm trọn trong vùng in, có viền',
             last: true,
             stacked: true,
             trailing: GoldSegments<bool>(
@@ -373,15 +386,9 @@ class _PrinterPageState extends State<PrinterPage> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              flex: 125,
-              child: Column(children: [current, const SizedBox(height: 24), manual]),
-            ),
+            Expanded(flex: 125, child: Column(children: [current, const SizedBox(height: 24), manual])),
             const SizedBox(width: 24),
-            Expanded(
-              flex: 100,
-              child: Column(children: [whenPrinting, const SizedBox(height: 24), checks]),
-            ),
+            Expanded(flex: 100, child: Column(children: [whenPrinting, const SizedBox(height: 24), checks])),
           ],
         ),
         const SizedBox(height: 24),
@@ -406,7 +413,10 @@ Future<void> sendTestPrint(BuildContext context, Booth b, BoothFrame frame) asyn
     ),
   );
   final dir = Directory(p.join(b.docs.path, 'Booth', 'in-thu'))..createSync(recursive: true);
-  final path = await b.printerCopy(card, p.join(dir.path, 'in-thu-${frame.id}-${DateTime.now().millisecondsSinceEpoch}.jpg'));
+  final path = await b.printerCopy(
+    card,
+    p.join(dir.path, 'in-thu-${frame.id}-${DateTime.now().millisecondsSinceEpoch}.jpg'),
+  );
   card.dispose();
   b.prints.add(path);
   if (context.mounted) showToast(context, 'Đã gửi in thử ${frame.name}', icon: Icons.print_outlined);

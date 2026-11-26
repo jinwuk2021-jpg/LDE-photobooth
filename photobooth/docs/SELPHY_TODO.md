@@ -63,6 +63,7 @@ Tấm in thử có QR trỏ tới một link giả (`.../b/testtesttest`): trang
 |---|---|
 | Có viền trắng quanh ảnh | **Kiểu in: Tràn lề** (mặc định) |
 | Bị cắt mất chữ hoặc QR ở mép | **Kiểu in: Có viền** |
+| In ra bị phóng to, mất mép / bị xoay | **Máy in → Khi in → Khổ giấy** chọn đúng giấy đang lắp (SELPHY: Postcard; máy in ảnh: 2L hoặc L) |
 | Màu in ra nhạt, thiếu đậm | thẻ **Màu tấm in** → **Độ đậm màu: Rất đậm** (mặc định là Đậm) |
 | Màu quá gắt, da bị đỏ / cam | **Độ đậm màu: Vừa** |
 | Ảnh in ra tối, màu vàng bị xỉn | **Độ sáng: +5%**, chưa đủ thì **+10%** |
