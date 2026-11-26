@@ -58,7 +58,7 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
       }
       printFile(
         url: args["url"] as? String ?? "", path: args["path"] as? String ?? "", fill: args["fill"] as? Bool ?? true,
-        result: result)
+        direct: args["direct"] as? Bool ?? false, result: result)
     case "reachable":
       guard let url = URL(string: args["url"] as? String ?? "") else { return result(false) }
       UIPrinter(url: url).contactPrinter { ok in result(ok) }
@@ -81,7 +81,11 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
   /// → nil when the job was handed to the printer, else an error message (Vietnamese, shown in admin).
   /// [fill]: the picture covers the whole sheet (borderless; the printer trims its edge),
   /// else it fits inside the printable area (a white border where the printer needs one).
-  private func printFile(url: String, path: String, fill: Bool, result: @escaping FlutterResult) {
+  /// [direct]: hand iOS the JPEG itself (it goes to the printer as is, small and quick) instead of
+  /// drawing a page that iOS then turns into a full-resolution raster for the printer (several
+  /// times the data over the SELPHY's slow Wi-Fi). Only asked for when the card already has the
+  /// sheet's shape (postcard, borderless), so there is nothing to place.
+  private func printFile(url: String, path: String, fill: Bool, direct: Bool, result: @escaping FlutterResult) {
     guard let printerUrl = URL(string: url) else { return result("Địa chỉ máy in không hợp lệ") }
     guard let image = UIImage(contentsOfFile: path) else { return result("Không đọc được file ảnh in") }
     let info = UIPrintInfo.printInfo()
@@ -90,9 +94,14 @@ final class BoothPrinter: NSObject, FlutterPlugin, UIPrintInteractionControllerD
     info.jobName = "Photobooth"
     let controller = UIPrintInteractionController.shared
     controller.printInfo = info
-    // We draw the page ourselves so iOS never adds its own scaling or margins.
-    controller.printingItem = nil
-    controller.printPageRenderer = PhotoPageRenderer(image: image, fill: fill)
+    if direct {
+      controller.printPageRenderer = nil
+      controller.printingItem = URL(fileURLWithPath: path)
+    } else {
+      // We draw the page ourselves so iOS never adds its own scaling or margins.
+      controller.printingItem = nil
+      controller.printPageRenderer = PhotoPageRenderer(image: image, fill: fill)
+    }
     controller.delegate = self
     controller.print(to: UIPrinter(url: printerUrl)) { _, completed, error in
       if let error = error {

@@ -213,12 +213,10 @@ void main() {
       log('${frame.id}: $k.mp4 ${(File(p.join(dir.path, '$k.mp4')).lengthSync() / 1024).round()} KB');
     }
 
-    // The print waits for the (switched off) printer instead of failing.
+    // The (switched off) printer: the print stops as an error with the reason, nothing is resent by itself.
     final job = booth.prints.jobs.firstWhere((j) => j.path == p.relative(printerCopy, from: booth.docs.path));
-    // Jobs go in order: only the first waiting one is held up with the reason, the rest queue behind it.
-    final first = booth.prints.jobs.lastWhere((j) => j.status == JobStatus.waiting);
-    await waitFor(t, () => first.error == PrintQueue.waitingForPrinter, timeout: const Duration(seconds: 30), what: 'print job waiting');
-    expect(job.status, JobStatus.waiting);
+    await waitFor(t, () => job.status == JobStatus.failed, timeout: const Duration(seconds: 60), what: 'print job failed');
+    expect(job.error, PrintQueue.notConnected);
     expect(booth.prints.printerOk, isFalse);
 
     // Everything reaches the real Worker and the guest page serves it.

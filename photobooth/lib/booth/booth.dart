@@ -192,7 +192,8 @@ class Booth {
       brighten: settings.printBrighten / 100,
     );
     try {
-      return await camera.saveJpeg(copy, path, quality: 95);
+      // 92: no visible difference on dye-sub paper, a smaller file over the printer's slow Wi-Fi.
+      return await camera.saveJpeg(copy, path, quality: 92);
     } finally {
       copy.dispose();
     }

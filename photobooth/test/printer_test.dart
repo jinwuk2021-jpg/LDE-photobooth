@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:fake_async/fake_async.dart';
@@ -24,7 +26,7 @@ void main() {
 
   String card(String name) => (File('${docs.path}/$name')..writeAsBytesSync([1])).path;
 
-  test('printer away: the job waits (not failed) and goes by itself when the printer is back', () {
+  test('printer away: the job stops as an error, is not resent when the printer is back, "In lại" sends it', () {
     fakeAsync((async) {
       var online = false;
       final sent = <String>[];
@@ -34,7 +36,7 @@ void main() {
         docs,
         reachable: (_) async => online,
         send: (_, path, _) async {
-          sent.add(path);
+          sent.add(path.split('/').last);
           return null;
         },
       )..start(watchLifecycle: false);
@@ -43,17 +45,63 @@ void main() {
       q.add(card('a.jpg'));
       async.flushMicrotasks();
       expect(sent, isEmpty);
-      expect(q.jobs.single.status, JobStatus.waiting);
-      expect(q.jobs.single.error, PrintQueue.waitingForPrinter);
-      async.elapse(const Duration(seconds: 45));
-      expect(sent, isEmpty);
-      expect(q.jobs.single.status, JobStatus.waiting);
+      expect(q.jobs.single.status, JobStatus.failed);
+      expect(q.jobs.single.error, PrintQueue.notConnected);
       online = true;
-      async.elapse(PrintQueue.offlineEvery);
-      expect(sent, hasLength(1));
-      expect(q.jobs.single.status, JobStatus.done);
+      async.elapse(const Duration(minutes: 5));
       expect(q.printerOk, isTrue);
-      expect(q.lastSeen, isNotNull);
+      expect(sent, isEmpty, reason: 'never resent by itself');
+      q.retry(q.jobs.single);
+      async.flushMicrotasks();
+      expect(sent, ['a.jpg']);
+      expect(q.jobs.single.status, JobStatus.done);
+      q.dispose();
+    });
+  });
+
+  test('queue: one at a time in order; a failed job stops alone, the next ones still print; send time kept', () {
+    fakeAsync((async) {
+      final t0 = DateTime(2026, 12, 23, 20);
+      final sent = <String>[];
+      final pending = <Completer<String?>>[];
+      var inFlight = 0, most = 0;
+      final q = PrintQueue(
+        prefs,
+        settings,
+        docs,
+        now: () => t0.add(async.elapsed),
+        reachable: (_) async => true,
+        send: (_, path, _) {
+          sent.add(path.split('/').last);
+          most = math.max(most, ++inFlight);
+          final c = Completer<String?>();
+          pending.add(c);
+          return c.future.whenComplete(() => inFlight--);
+        },
+      );
+      for (final n in ['1.jpg', '2.jpg', '3.jpg']) {
+        q.add(card(n));
+      }
+      async.flushMicrotasks();
+      expect(sent, ['1.jpg'], reason: 'the next waits for the first');
+      async.elapse(const Duration(seconds: 9));
+      pending[0].complete(null);
+      async.flushMicrotasks();
+      expect(sent, ['1.jpg', '2.jpg']);
+      pending[1].complete('Hết giấy');
+      async.flushMicrotasks();
+      expect(sent, ['1.jpg', '2.jpg', '3.jpg'], reason: 'an error does not hold the queue');
+      pending[2].complete(null);
+      async.flushMicrotasks();
+      expect(most, 1);
+      final byName = {for (final j in q.jobs) j.path: j};
+      expect(byName['1.jpg']!.status, JobStatus.done);
+      expect(byName['1.jpg']!.sendTime, const Duration(seconds: 9));
+      expect(byName['2.jpg']!.status, JobStatus.failed);
+      expect(byName['2.jpg']!.error, 'Hết giấy');
+      expect(byName['3.jpg']!.status, JobStatus.done);
+      async.elapse(const Duration(minutes: 30));
+      expect(sent, hasLength(3), reason: 'the failed one is not resent');
       q.dispose();
     });
   });
@@ -113,41 +161,6 @@ void main() {
       expect(sends, 2);
       async.elapse(const Duration(minutes: 10));
       expect(sends, 2);
-      q.dispose();
-    });
-  });
-
-  test('printer back after a long time: old waiting jobs are not printed by themselves', () {
-    fakeAsync((async) {
-      final t0 = DateTime(2026, 12, 23, 20);
-      var online = false;
-      final sent = <String>[];
-      final q = PrintQueue(
-        prefs,
-        settings,
-        docs,
-        now: () => t0.add(async.elapsed),
-        reachable: (_) async => online,
-        send: (_, path, _) async {
-          sent.add(path.split('/').last);
-          return null;
-        },
-      )..start(watchLifecycle: false);
-      q.add(card('old.jpg'));
-      async.elapse(const Duration(minutes: 10));
-      q.add(card('recent.jpg'));
-      async.elapse(const Duration(minutes: 10));
-      // Switched on 20 min after the first job, 10 min after the second.
-      online = true;
-      async.elapse(PrintQueue.offlineEvery);
-      expect(sent, ['recent.jpg']);
-      final old = q.jobs.firstWhere((j) => j.path.endsWith('old.jpg'));
-      expect(old.status, JobStatus.failed);
-      expect(old.error, PrintQueue.tooLate);
-      // Staff still can.
-      q.retry(old);
-      async.flushMicrotasks();
-      expect(sent, ['recent.jpg', 'old.jpg']);
       q.dispose();
     });
   });
@@ -244,36 +257,38 @@ void main() {
       ].join(',')}]',
     );
     final sent = <String>[];
-    var online = true;
+    Completer<String?>? hold;
     final q = PrintQueue(
       prefs,
       settings,
       docs,
-      reachable: (_) async => online,
-      send: (_, path, _) async {
+      reachable: (_) async => true,
+      send: (_, path, _) {
         sent.add(path);
-        return null;
+        return (hold = Completer<String?>()).future;
       },
     )..load();
     expect(q.jobs.map((j) => j.path), ['kept.jpg']);
     expect(q.failedCount, 1);
     expect(prefs.getString('printJobs'), isNot(contains('gone')));
 
-    // Deleted while waiting for the printer: gone from the queue, the next one still prints.
-    online = false;
+    // Deleted while waiting behind a print in progress: gone from the queue, the next one still prints.
+    final first = card('first.jpg');
+    q.add(first);
     final doomed = card('doomed.jpg');
     q.add(doomed);
     final next = card('next.jpg');
     q.add(next);
     await Future<void>.delayed(const Duration(milliseconds: 20));
-    expect(sent, isEmpty);
+    expect(sent, [first]);
     File(doomed).deleteSync();
-    online = true;
-    q.resume();
-    for (var i = 0; i < 20 && sent.isEmpty; i++) {
+    hold!.complete(null);
+    for (var i = 0; i < 20 && sent.length < 2; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 5));
     }
-    expect(sent, [next]);
+    hold!.complete(null);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(sent, [first, next]);
     expect(q.jobs.map((j) => j.path), isNot(contains('doomed.jpg')));
     expect(q.failedCount, 1, reason: 'only the old kept.jpg failure');
     expect(kept, isNotEmpty);

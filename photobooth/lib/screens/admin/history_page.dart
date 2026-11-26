@@ -325,7 +325,10 @@ class _HistoryPageState extends State<HistoryPage> {
     if (mine.any((j) => j.status == JobStatus.waiting)) {
       return (done > 0 ? 'Đã in ×$done · chờ thêm' : 'Chờ máy in', PillKind.wait);
     }
-    if (done > 0) return ('Đã in ×$done', PillKind.ok);
+    if (done > 0) {
+      final secs = mine.where((j) => j.status == JobStatus.done).map((j) => j.sendTime).nonNulls.lastOrNull;
+      return ('Đã in ×$done${secs == null ? '' : ' · ${secs.inSeconds}s'}', PillKind.ok);
+    }
     if (mine.any((j) => j.status == JobStatus.failed)) return ('Lỗi – chưa in', PillKind.bad);
     return ('Chưa in', PillKind.none);
   }

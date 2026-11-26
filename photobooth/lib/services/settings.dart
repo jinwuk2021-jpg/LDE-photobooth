@@ -84,6 +84,13 @@ class BoothSettings extends ChangeNotifier {
   PrintPaper get printPaper => PrintPaper.byName(_prefs.getString('printPaper'));
   set printPaper(PrintPaper v) => _set('printPaper', v.name);
 
+  /// Postcard, borderless: send the JPEG as is (quick) instead of a drawn page iOS rasterises.
+  bool get printFast => _prefs.getBool('printFast') ?? true;
+  set printFast(bool v) {
+    _prefs.setBool('printFast', v);
+    notifyListeners();
+  }
+
   bool get printFill => _prefs.getBool('printFill') ?? true;
   set printFill(bool v) {
     _prefs.setBool('printFill', v);

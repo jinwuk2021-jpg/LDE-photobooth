@@ -29,6 +29,7 @@ abstract final class PrinterChannel {
     String path, {
     bool fill = true,
     PrintPaper paper = PrintPaper.postcard,
+    bool direct = false,
   }) async {
     try {
       return await _ch.invokeMethod<String>('print', {
@@ -37,6 +38,7 @@ abstract final class PrinterChannel {
         'fill': fill,
         'paperW': paper.widthMm,
         'paperH': paper.heightMm,
+        'direct': direct,
       });
     } on PlatformException catch (e) {
       return e.message ?? e.code;
@@ -89,6 +91,13 @@ class PrintJob {
   /// [PrintQueue.maxWait] is not printed by itself any more.
   DateTime queuedAt;
 
+  /// Handed to iOS / back from it (in memory: "Lịch sử in" shows how long a print took to send).
+  DateTime? sentAt;
+  DateTime? doneAt;
+
+  /// From handing the file to iOS to the printer taking it (null until it is done).
+  Duration? get sendTime => sentAt == null || doneAt == null ? null : doneAt!.difference(sentAt!);
+
   Map<String, Object?> toJson() => {
     'path': path,
     'created': created.toIso8601String(),
@@ -106,14 +115,13 @@ class PrintJob {
 /// What goes wrong is the printer being asleep, off or off the network at that moment, so:
 /// - a watchdog asks the printer every [offlineEvery] while it does not answer (every
 ///   [onlineEvery] while it does), from launch on, and again when the app comes back to the front;
-/// - a job is only sent once the printer answers; until then it waits (never lost, never failed)
-///   and goes as soon as the printer is back;
-/// - a job is never sent twice by itself: once handed to the printer it is done, or failed
-///   (iOS may report an error for a sheet that still comes out, e.g. right after the printer
-///   wakes, so an automatic resend printed doubles). Staff resend with "In lại" / "Thử lại lỗi";
-/// - a job that waited longer than [maxWait] for the printer is not printed by itself (the
-///   guest is long gone; a test print from yesterday must not come out when the printer is
-///   switched on): it shows as not printed, "In lại" sends it.
+/// - jobs go one at a time, in the order they came; each is sent only if the printer answers;
+/// - nothing is ever retried by itself: a job that fails (printer not answering, iOS error,
+///   no answer in 3 min) stops as an error with the reason, and the queue goes on with the
+///   next job. Staff resend it by hand ("In lại" / "Thử lại lỗi"), after checking the tray:
+///   iOS sometimes reports an error for a sheet that still came out;
+/// - a job left waiting longer than [maxWait] (e.g. queued before a relaunch) is not sent by
+///   itself either.
 class PrintQueue extends ChangeNotifier {
   PrintQueue(
     this._prefs,
@@ -139,8 +147,16 @@ class PrintQueue extends ChangeNotifier {
   /// Tests send through this; null = the real printer ([_toPrinter]).
   final Future<String?> Function(String url, String path, bool fill)? _send;
 
-  Future<String?> _toPrinter(String url, String path, bool fill) =>
-      PrinterChannel.printFile(url, path, fill: fill, paper: _settings.printPaper);
+  Future<String?> _toPrinter(String url, String path, bool fill) => PrinterChannel.printFile(
+    url,
+    path,
+    fill: fill,
+    paper: _settings.printPaper,
+    direct: _settings.printFast && fill && _settings.printPaper == PrintPaper.postcard,
+  );
+
+  /// The newest finished job's send time (Settings → Máy in shows it).
+  Duration? get lastSendTime => _jobs.reversed.map((j) => j.sendTime).nonNulls.firstOrNull;
   final List<PrintJob> _jobs = [];
   bool _busy = false;
   Timer? _watchdog;
@@ -155,7 +171,7 @@ class PrintQueue extends ChangeNotifier {
   static const contactTimeout = Duration(seconds: 12);
   static const printTimeout = Duration(minutes: 3);
   static const _timeoutError = 'Máy in không phản hồi sau 3 phút';
-  static const waitingForPrinter = 'Đang chờ máy in kết nối lại';
+  static const notConnected = 'Không kết nối được máy in. Bật máy in rồi bấm In lại';
 
   /// Last result: null = not asked yet, true = answers / last job ok, false = unreachable or last job failed.
   bool? printerOk;
@@ -316,18 +332,17 @@ class PrintQueue extends ChangeNotifier {
       unawaited(_pump());
       return;
     } else if (!await _ask(url)) {
-      // Asleep / off / off the hotspot: the job keeps its place and goes when the watchdog sees
-      // the printer again. Not a failure, so no retry is used up.
-      job.error = waitingForPrinter;
+      // Asleep / off / off the hotspot: this job stops here as an error (staff resend it with
+      // "In lại" once the printer is back); the queue goes on with the next one.
+      error = notConnected;
       printerOk = false;
-      _busy = false;
-      _save();
-      return;
     } else {
       lastSeen = DateTime.now();
       job
         ..status = JobStatus.printing
-        ..error = null;
+        ..error = null
+        ..sentAt = _now()
+        ..doneAt = null;
       _save();
       // A printer that never answers (out of paper, switched off mid-job) must not stop the queue,
       // and nothing thrown may leave the job stuck on "printing".
@@ -345,7 +360,8 @@ class PrintQueue extends ChangeNotifier {
     // Never resent by itself: a sheet iOS calls failed may still have come out.
     job
       ..status = error == null ? JobStatus.done : JobStatus.failed
-      ..error = error;
+      ..error = error
+      ..doneAt = job.sentAt == null ? null : _now();
     printerOk = error == null;
     _busy = false;
     _save();

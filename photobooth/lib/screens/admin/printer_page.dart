@@ -293,6 +293,14 @@ class _PrinterPageState extends State<PrinterPage> {
             ),
           ),
           OptRow(
+            label: 'Gửi in nhanh',
+            hint: s.printPaper == PrintPaper.postcard && s.printFill
+                ? 'Gửi thẳng file ảnh (nhẹ, nhanh). Nếu in ra lệch / có viền lạ thì tắt'
+                      '${q.lastSendTime == null ? '' : ' · lần gần nhất ${q.lastSendTime!.inSeconds} giây'}'
+                : 'Chỉ dùng cho Postcard + Tràn lề',
+            trailing: GoldToggle(value: s.printFast, onChanged: (v) => s.printFast = v),
+          ),
+          OptRow(
             label: 'Khổ giấy',
             hint: 'Postcard 100×148 (SELPHY) · 2L 127×178 · L 89×127',
             stacked: true,

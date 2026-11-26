@@ -36,11 +36,16 @@ Mở admin: giữ nút bánh răng ⚙ ở góc trên bên phải màn chờ 3 g
 - [ ] Thanh bên trái: chấm xanh cạnh **Máy in**
 
 App tự giữ kết nối: hỏi máy in mỗi 15 giây khi không thấy (mỗi 60 giây khi đang ổn), và hỏi lại ngay khi mở
-lại app. Nếu máy in mất kết nối lúc khách bấm in, tấm đó **không bị mất**: nằm chờ ("Đang chờ máy in kết nối lại")
-và tự in khi máy in có lại, **nếu chờ chưa quá 15 phút**. Tấm chờ lâu hơn (vd. in thử lúc máy in tắt, hay từ hôm trước)
-không tự in nữa, để bật máy in lên không ra tấm thừa; nó hiện "Chưa in" trong **Lịch sử in**, cần thì bấm **In lại**.
-Tấm đã gửi sang máy in mà iOS báo lỗi (hết giấy, kẹt giấy…) **không tự gửi lại** (có khi tờ đó vẫn ra, gửi lại là in
-đôi): app báo **Lỗi** trong **Lịch sử in**; kiểm tra khay giấy, tấm chưa ra thật thì bấm **In lại** (hoặc **Thử lại lỗi**).
+lại app (chỉ để biết máy in còn đó, **không** tự gửi lại gì).
+
+Hàng đợi in: in lần lượt từng tấm theo thứ tự bấm. Tấm nào lỗi (máy in tắt / mất kết nối, hết giấy, kẹt giấy,
+không phản hồi sau 3 phút) thì **dừng ở đó, chỉ báo Lỗi** kèm lý do trong **Lịch sử in**; các tấm sau vẫn in bình
+thường. App **không bao giờ tự in lại**. Kiểm tra khay giấy, tấm nào chưa ra thật thì bấm **In lại** (hoặc
+**Thử lại lỗi** cho tất cả).
+
+Tốc độ: **Máy in → Gửi in nhanh** (bật sẵn, cho Postcard + Tràn lề) gửi thẳng file ảnh sang máy in thay vì để iPad
+dựng lại cả trang, nên SELPHY nhận dữ liệu nhanh hơn. Lịch sử in ghi số giây gửi của mỗi lượt ("Đã in ×1 · 12s").
+Nếu bản in bị lệch hay có viền lạ khi bật, tắt nó đi và báo lại.
 
 ## 3. In thử từng khung (ghi lại kết quả)
 
