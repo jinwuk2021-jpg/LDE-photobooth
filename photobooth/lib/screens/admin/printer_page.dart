@@ -283,6 +283,16 @@ class _PrinterPageState extends State<PrinterPage> {
             trailing: GoldStepper(value: s.printCopies, min: 1, max: 3, onChanged: (v) => s.printCopies = v),
           ),
           OptRow(
+            label: 'Nút "In thêm 1 tấm"',
+            hint: 'Số tấm khách được in thêm ở màn cảm ơn',
+            stacked: true,
+            trailing: GoldSegments<int>(
+              options: const [(0, 'Tắt'), (1, '1'), (2, '2'), (3, '3')],
+              value: s.extraPrintMax,
+              onChanged: (v) => s.extraPrintMax = v,
+            ),
+          ),
+          OptRow(
             label: 'Khổ giấy',
             hint: 'Postcard 100×148 (SELPHY) · 2L 127×178 · L 89×127',
             stacked: true,

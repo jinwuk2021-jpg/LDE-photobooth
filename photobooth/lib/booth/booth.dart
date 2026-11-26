@@ -49,8 +49,11 @@ class GuestSession extends ChangeNotifier {
 
 /// What the thank-you screen shows.
 class Finished {
-  const Finished(this.url, this.printPath, this.aspect, {this.printed = false});
+  const Finished(this.url, this.printPath, this.aspect, {this.printed = false, this.printerCopy});
   final String url;
+
+  /// The file the printer got (turned / colour-adjusted), for "In thêm 1 tấm". Null when not printing.
+  final String? printerCopy;
 
   /// Sent to the printer (printing switched on in admin).
   final bool printed;
@@ -143,8 +146,9 @@ class Booth {
       ),
     );
     final printPath = await camera.saveJpeg(printImage, p.join(dir.path, 'print.jpg'), quality: 95);
+    String? copy;
     if (settings.printing) {
-      final copy = await printerCopy(printImage, p.join(dir.path, 'print_may_in.jpg'));
+      copy = await printerCopy(printImage, p.join(dir.path, 'print_may_in.jpg'));
       for (var i = 0; i < settings.printCopies; i++) {
         prints.add(copy);
       }
@@ -164,7 +168,7 @@ class Booth {
       uploads.add(id, '${k + 1}.jpg', path, title);
     }
     unawaited(_clips(guest, filter, id, dir, title));
-    return Finished(url, printPath, guest.frame.size.aspectRatio, printed: settings.printing);
+    return Finished(url, printPath, guest.frame.size.aspectRatio, printed: settings.printing, printerCopy: copy);
   }
 
   Future<void> _clips(GuestSession guest, BoothFilter filter, String id, Directory dir, String title) async {

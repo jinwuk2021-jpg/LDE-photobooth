@@ -108,6 +108,8 @@ class PrintQueue extends ChangeNotifier {
     Future<bool> Function(String url)? reachable,
     Future<String?> Function(String url, String path, bool fill)? send,
   }) : _reachable = reachable ?? PrinterChannel.reachable,
+       // A named parameter cannot be a private initializing formal.
+       // ignore: prefer_initializing_formals
        _send = send;
 
   final SharedPreferences _prefs;
@@ -191,15 +193,16 @@ class PrintQueue extends ChangeNotifier {
     super.dispose();
   }
 
-  void add(String absolutePath) {
-    _jobs.add(
-      PrintJob(
-        path: p.relative(absolutePath, from: docs.path),
-        created: DateTime.now(),
-      ),
+  /// Queues [absolutePath]; the job is returned so a screen can follow it ("In thêm 1 tấm").
+  PrintJob add(String absolutePath) {
+    final job = PrintJob(
+      path: p.relative(absolutePath, from: docs.path),
+      created: DateTime.now(),
     );
+    _jobs.add(job);
     _save();
     _pump();
+    return job;
   }
 
   /// Printing was switched on (or a printer picked): send what is waiting.

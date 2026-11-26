@@ -51,6 +51,14 @@ class BoothSettings extends ChangeNotifier {
   }
 
   /// Cards printed per guest (1–3).
+  /// "In thêm 1 tấm" on the thank-you screen: how many extra copies a guest may ask for
+  /// (0 hides the button).
+  int get extraPrintMax => (_prefs.getInt('extraPrintMax') ?? 1).clamp(0, 3);
+  set extraPrintMax(int v) {
+    _prefs.setInt('extraPrintMax', v.clamp(0, 3));
+    notifyListeners();
+  }
+
   int get printCopies => (_prefs.getInt('printCopies') ?? 1).clamp(1, 3);
   set printCopies(int v) {
     _prefs.setInt('printCopies', v.clamp(1, 3));

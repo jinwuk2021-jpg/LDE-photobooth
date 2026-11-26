@@ -72,6 +72,9 @@ abstract class Strings {
   // Thank you
   String get allDone;
   String get printing;
+  String get printOneMore;
+  String get printingMore;
+  String get printedMore;
   String get scanToGet;
   String get openCamera;
   String get videosLater;
@@ -150,6 +153,12 @@ class _Vi extends Strings {
   String get allDone => 'Xong rồi!';
   @override
   String get printing => 'Đang in!';
+  @override
+  String get printOneMore => 'In thêm 1 tấm';
+  @override
+  String get printingMore => 'Đang in thêm…';
+  @override
+  String get printedMore => 'Đã in thêm ✓';
   @override
   String get scanToGet => 'Quét mã để lấy ảnh & video';
   @override
@@ -238,6 +247,12 @@ class _En extends Strings {
   @override
   String get printing => 'Printing!';
   @override
+  String get printOneMore => 'Print 1 more';
+  @override
+  String get printingMore => 'Printing…';
+  @override
+  String get printedMore => 'Printed ✓';
+  @override
   String get scanToGet => 'Scan to get your photos & videos';
   @override
   String get openCamera => 'Open your phone camera and scan';
@@ -324,6 +339,12 @@ class _Ja extends Strings {
   String get allDone => '完成！';
   @override
   String get printing => '印刷中！';
+  @override
+  String get printOneMore => 'もう1枚印刷';
+  @override
+  String get printingMore => '印刷中…';
+  @override
+  String get printedMore => '印刷しました ✓';
   @override
   String get scanToGet => 'QRで写真と動画をゲット';
   @override

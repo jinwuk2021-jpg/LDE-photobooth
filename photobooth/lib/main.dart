@@ -195,7 +195,7 @@ class _HomeState extends State<Home> {
           _go(Stage.thanks);
         },
       ),
-      Stage.thanks => ThanksScreen(finished: _finished!, onDone: _reset),
+      Stage.thanks => ThanksScreen(booth: booth, finished: _finished!, onDone: _reset),
     };
     return Scaffold(
       backgroundColor: Lux.night,
